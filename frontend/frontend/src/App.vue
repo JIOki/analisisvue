@@ -12,8 +12,22 @@ import HelloWorld from './components/HelloWorld.vue'
     </a>
   </div>
   <HelloWorld msg="Vite + Vue" />
-</template>
 
+    <div>
+    <h1>Sistema de Análisis con Ollama</h1>
+    <nav>
+      <router-link to="/">🏠 Home</router-link> |
+      <router-link to="/upload-docs">📄 Cargar Material</router-link> |
+      <router-link to="/upload-data">📊 Cargar Datos</router-link> |
+      <router-link to="/questions">❓ Preguntas</router-link>
+    </nav>
+
+    <!-- Aquí Vue Router renderiza la vista actual -->
+    <router-view />
+  </div>
+</template>
+<script setup>
+</script>
 <style scoped>
 .logo {
   height: 6em;
@@ -26,5 +40,9 @@ import HelloWorld from './components/HelloWorld.vue'
 }
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
+}
+
+nav {
+  margin-bottom: 20px;
 }
 </style>
