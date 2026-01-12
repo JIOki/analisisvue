@@ -1,0 +1,112 @@
+services:
+  # -------------------------------------------------------------------------
+  # Database PostgreSQL with pgvector
+  # -------------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: rag_db
+    environment:
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpass
+      POSTGRES_DB: ragdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raguser -d ragdb"]
+      interval: 60s
+      timeout: 30s
+      retries: 10
+      start_period: 120s
+    networks:
+      - rag_network
+
+  # -------------------------------------------------------------------------
+  # Ollama (Local AI Models)
+  # -------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - rag_network
+
+  # -------------------------------------------------------------------------
+  # Backend API
+  # -------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag_backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=postgresql://raguser:ragpass@db:5432/ragdb
+      - DB_HOST=db
+      - DB_NAME=ragdb
+      - DB_USER=raguser
+      - DB_PASS=ragpass
+      - DB_PORT=5432
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - EMBEDDING_MODEL=mxbai-embed-large
+      - LLM_MODEL=gemma3
+      - JWT_SECRET=oFu3PmRzGSbkDM4wJ8ogrATQGafLtvbOz9AQjTj291c=
+      - JWT_EXPIRES_IN=24h
+      - UPLOAD_DIR=./uploads
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - rag_network
+
+  # -------------------------------------------------------------------------
+  # Frontend (Nginx)
+  # -------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontendvite
+      dockerfile: Dockerfile
+    container_name: rag_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - rag_network
+
+# -------------------------------------------------------------------------
+# Persistent Volumes
+# -------------------------------------------------------------------------
+volumes:
+  pgdata:
+    driver: local
+  ollama_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# -------------------------------------------------------------------------
+# Networks
+# -------------------------------------------------------------------------
+networks:
+  rag_network:
+    driver: bridge

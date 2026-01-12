@@ -1,0 +1,393 @@
+/* ========================================
+   GLASSMORPHISM DESIGN SYSTEM
+   ======================================== */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Root Variables - Light Theme */
+:root {
+  /* Glass Surfaces */
+  --glass-card: rgba(255, 255, 255, 0.4);
+  --glass-elevated: rgba(255, 255, 255, 0.5);
+  --glass-subtle: rgba(255, 255, 255, 0.35);
+  --glass-navbar: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  
+  /* Background Gradients */
+  --bg-gradient-light: linear-gradient(135deg, #E8EAF0 0%, #F4F5F9 50%, #FAFBFF 100%);
+  --bg-gradient-dark: linear-gradient(135deg, #0F1419 0%, #1A1F2E 50%, #252B3B 100%);
+  
+  /* Glass Backdrop Filters */
+  --backdrop-glass-light: blur(20px) saturate(150%);
+  --backdrop-glass-medium: blur(25px) saturate(160%);
+  --backdrop-glass-heavy: blur(40px) saturate(150%);
+  --backdrop-glass-navbar: blur(15px) saturate(180%);
+  
+  /* Text Colors */
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-on-glass: #374151;
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"],
+.app-dark {
+  /* Glass Surfaces */
+  --glass-card: rgba(30, 30, 30, 0.5);
+  --glass-elevated: rgba(40, 40, 40, 0.6);
+  --glass-subtle: rgba(25, 25, 25, 0.45);
+  --glass-navbar: rgba(20, 20, 20, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  
+  /* Text Colors */
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-on-glass: #E5E7EB;
+}
+
+/* ========================================
+   GLASS UTILITY CLASSES
+   ======================================== */
+
+/* Base Glass Card */
+.glass-card {
+  background: var(--glass-card);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: all 0.3s ease-out;
+}
+
+/* Elevated Glass (for modals, dropdowns) */
+.glass-elevated {
+  background: var(--glass-elevated);
+  backdrop-filter: var(--backdrop-glass-heavy);
+  -webkit-backdrop-filter: var(--backdrop-glass-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.16), 0 12px 32px rgba(0,0,0,0.08), inset 0 2px 0 rgba(255,255,255,0.4);
+}
+
+/* Subtle Glass (for backgrounds) */
+.glass-subtle {
+  background: var(--glass-subtle);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+
+/* Glass Navbar */
+.glass-navbar {
+  background: var(--glass-navbar);
+  backdrop-filter: var(--backdrop-glass-navbar);
+  -webkit-backdrop-filter: var(--backdrop-glass-navbar);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Glass Input Fields */
+.glass-input {
+  background: var(--glass-subtle);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  color: var(--text-on-glass);
+  transition: all 0.3s ease-out;
+}
+
+.glass-input:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  background: var(--glass-card);
+}
+
+.glass-input::placeholder {
+  color: rgba(107, 114, 128, 0.8);
+}
+
+/* Glass Buttons */
+.glass-button {
+  background: var(--glass-card);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  color: var(--text-on-glass);
+  font-weight: 500;
+  transition: all 0.3s ease-out;
+}
+
+.glass-button:hover {
+  background: var(--glass-elevated);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59,130,246,0.15);
+}
+
+.glass-button:active {
+  transform: translateY(0);
+}
+
+/* Glass Hover Effect */
+.glass-hover {
+  transition: all 0.3s ease-out;
+}
+
+.glass-hover:hover {
+  transform: translateY(-4px);
+  background: var(--glass-elevated);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12), 0 6px 20px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+/* Glass Drag & Drop Zone */
+.glass-dropzone {
+  background: var(--glass-subtle);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 2px dashed var(--glass-border);
+  border-radius: 24px;
+  transition: all 0.3s ease-out;
+}
+
+.glass-dropzone:hover {
+  border-color: #3B82F6;
+  background: var(--glass-card);
+  transform: scale(1.01);
+}
+
+.glass-dropzone.drag-over {
+  border-color: #3B82F6;
+  border-width: 3px;
+  background: var(--glass-elevated);
+  backdrop-filter: var(--backdrop-glass-medium);
+  -webkit-backdrop-filter: var(--backdrop-glass-medium);
+  box-shadow: 0 0 0 6px rgba(59,130,246,0.1);
+  transform: scale(1.02);
+}
+
+/* ========================================
+   BACKGROUND CLASSES
+   ======================================== */
+
+.bg-glass-gradient-light {
+  background: var(--bg-gradient-light);
+}
+
+.bg-glass-gradient-dark {
+  background: var(--bg-gradient-dark);
+}
+
+/* ========================================
+   TEXT GLASS STYLES
+   ======================================== */
+
+.text-glass-primary {
+  color: var(--text-primary);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.text-glass-secondary {
+  color: var(--text-secondary);
+}
+
+.text-glass-on-glass {
+  color: var(--text-on-glass);
+  font-weight: 500;
+}
+
+/* ========================================
+   ANIMATION UTILITIES
+   ======================================== */
+
+.animate-glass-fade {
+  animation: glassFade 0.4s ease-out;
+}
+
+.animate-glass-slide {
+  animation: glassSlideUp 0.3s ease-out;
+}
+
+.animate-glass-lift {
+  transition: transform 0.3s ease-out;
+}
+
+.animate-glass-lift:hover {
+  transform: translateY(-4px);
+}
+
+@keyframes glassFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glassSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   REDUCED MOTION SUPPORT
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .glass-card,
+  .glass-elevated,
+  .glass-subtle,
+  .glass-navbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(255,255,255,0.95) !important;
+  }
+  
+  .app-dark .glass-card,
+  .app-dark .glass-elevated,
+  .app-dark .glass-subtle,
+  .app-dark .glass-navbar {
+    background: rgba(0,0,0,0.95) !important;
+  }
+}
+
+/* ========================================
+   RESPONSIVE GLASS ADJUSTMENTS
+   ======================================== */
+
+/* Mobile - Reduce blur for performance */
+@media (max-width: 768px) {
+  .glass-card,
+  .glass-elevated,
+  .glass-subtle {
+    backdrop-filter: blur(15px) saturate(120%);
+    -webkit-backdrop-filter: blur(15px) saturate(120%);
+  }
+  
+  .glass-navbar {
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+  }
+}
+
+/* ========================================
+   PRIMEVUE OVERRIDES (GLASS STYLING)
+   ======================================== */
+
+/* Glass-styled PrimeVue Cards */
+.p-card.glass-card {
+  background: var(--glass-card);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+}
+
+.p-card.glass-card .p-card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* Glass-styled PrimeVue Buttons */
+.p-button.glass-button {
+  background: var(--glass-card);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+  color: var(--text-on-glass);
+}
+
+.p-button.glass-button:hover {
+  background: var(--glass-elevated);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.2);
+}
+
+/* Glass-styled PrimeVue Inputs */
+.p-inputtext.glass-input {
+  background: var(--glass-subtle);
+  backdrop-filter: var(--backdrop-glass-light);
+  -webkit-backdrop-filter: var(--backdrop-glass-light);
+  border: 1px solid var(--glass-border);
+  color: var(--text-on-glass);
+}
+
+.p-inputtext.glass-input:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Primary Button (Solid - No Glass) */
+.btn-primary {
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease-out;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+.btn-primary:hover {
+  background: #2563EB;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59,130,246,0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ========================================
+   UTILITIES
+   ======================================== */
+
+.glass-border {
+  border: 1px solid var(--glass-border);
+}
+
+.glass-ring {
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+}
+
+.glass-shadow-inset {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* ========================================
+   FONT LOADING
+   ======================================== */
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  font-variation-settings: 'opsz' 32;
+}
+
+/* Ensure fonts are loaded for critical elements */
+.f-font-primary {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.f-font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}

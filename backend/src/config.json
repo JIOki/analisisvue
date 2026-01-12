@@ -1,0 +1,26 @@
+{
+  "development": {
+    "username": "raguser",
+    "password": "ragpass",
+    "database": "ragdb",
+    "host": "localhost",
+    "dialect": "postgres",
+    "logging": false
+  },
+  "test": {
+    "username": "raguser",
+    "password": "ragpass",
+    "database": "ragdb",
+    "host": "localhost",
+    "dialect": "postgres",
+    "logging": false
+  },
+  "production": {
+    "username": "raguser",
+    "password": "ragpass",
+    "database": "ragdb",
+    "host": "localhost",
+    "dialect": "postgres",
+    "logging": false
+  }
+}
