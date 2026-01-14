@@ -261,6 +261,15 @@ class OllamaEmbedder:
         """
         try:
             client = self._get_client()
+            
+            # Truncar texto si es muy largo
+            # El modelo mxbai-embed-large puede manejar hasta ~8192 tokens
+            # Pero para estar seguros, limitamos a 3000 caracteres (~1000 tokens)
+            max_chars = 3000
+            if len(text) > max_chars:
+                text = text[:max_chars]
+                logger.info(f"Texto truncado a {max_chars} caracteres para embedding")
+            
             response = client.embed(model=self.model, input=text)
             embedding = response.embeddings[0]
             
@@ -291,7 +300,17 @@ class OllamaEmbedder:
         
         try:
             client = self._get_client()
-            response = client.embed(model=self.model, input=texts)
+            
+            # Truncar cada texto individualmente
+            max_chars = 1500  # Aproximadamente 500-600 tokens
+            truncated_texts = []
+            for text in texts:
+                if len(text) > max_chars:
+                    truncated_texts.append(text[:max_chars])
+                else:
+                    truncated_texts.append(text)
+            
+            response = client.embed(model=self.model, input=truncated_texts)
             
             embeddings = np.array(response.embeddings, dtype=np.float32)
             
@@ -304,7 +323,81 @@ class OllamaEmbedder:
             
         except Exception as e:
             logger.error(f"Error generando embeddings: {e}")
-            raise
+            # Devolver ceros en caso de error para no fallar todo el proceso
+            return np.zeros((len(texts), 1024), dtype=np.float32)
+    
+    def embed_text_safe(self, text: str, max_chars: int = 2000) -> List[float]:
+        """
+        Genera embedding para un texto con truncamiento seguro
+        
+        Args:
+            text: Texto a embeber
+            max_chars: Maximo de caracteres a enviar (por defecto 2000)
+            
+        Returns:
+            Vector de embedding o ceros si falla
+        """
+        try:
+            client = self._get_client()
+            
+            # Truncar texto si es muy largo
+            if len(text) > max_chars:
+                text = text[:max_chars]
+            
+            response = client.embed(model=self.model, input=text)
+            embedding = response.embeddings[0]
+            
+            # Normalizar el vector
+            embedding_array = np.array(embedding, dtype=np.float32)
+            norm = np.linalg.norm(embedding_array)
+            if norm > 0:
+                embedding_array = embedding_array / norm
+            
+            return embedding_array.tolist()
+            
+        except Exception as e:
+            logger.warning(f"Error generando embedding (usando fallback de ceros): {e}")
+            return [0.0] * 1024
+    
+    def embed_texts_safe(self, texts: List[str], max_chars: int = 1500) -> np.ndarray:
+        """
+        Genera embeddings para multiples textos con truncamiento seguro
+        
+        Args:
+            texts: Lista de textos
+            max_chars: Maximo de caracteres por texto
+            
+        Returns:
+            Matriz de embeddings o ceros si falla
+        """
+        if not texts:
+            return np.array([]).reshape(0, 1024)
+        
+        try:
+            client = self._get_client()
+            
+            # Truncar cada texto individualmente
+            truncated_texts = []
+            for text in texts:
+                if len(text) > max_chars:
+                    truncated_texts.append(text[:max_chars])
+                else:
+                    truncated_texts.append(text)
+            
+            response = client.embed(model=self.model, input=truncated_texts)
+            
+            embeddings = np.array(response.embeddings, dtype=np.float32)
+            
+            # Normalizar
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            norms = np.where(norms == 0, 1, norms)
+            embeddings = embeddings / norms
+            
+            return embeddings
+            
+        except Exception as e:
+            logger.warning(f"Error generando embeddings (usando fallback de ceros): {e}")
+            return np.zeros((len(texts), 1024), dtype=np.float32)
 
 
 class ClaimAnalyzer:
@@ -413,9 +506,11 @@ class VerificationService:
         
         try:
             # Configuracion de limites para evitar errores de contexto
+            # El modelo mxbai-embed-large tiene limite ~8192 tokens de entrada total
+            # Pero para estar seguros y evitar cualquier limite del API, usamos limites conservadores
             MAX_CHUNKS = 5
-            MAX_CHUNK_LENGTH = 1000 # Reducido para permitir batches
-            BATCH_SIZE = 1  # Procesar en batches pequenos
+            MAX_CHUNK_LENGTH = 1200  # Aproximadamente 400-500 tokens
+            BATCH_SIZE = 1  # Procesar uno por uno
             
             # 1. Si hay context_chunks del frontend, usarlos directamente
             if context_chunks and len(context_chunks) > 0:
@@ -446,9 +541,17 @@ class VerificationService:
                 # Calcular similitudes usando embeddings en batches
                 if source_chunks:
                     logger.info(f"Calculando similitudes para {len(source_chunks)} chunks en batches de {BATCH_SIZE}...")
-                    response_embedding = self.embedder.embed_text(response)
                     
-                    # Procesar en batches pequenos
+                    # Truncar respuesta si es muy larga para el embedding
+                    response_for_embedding = response
+                    max_response_length = 3000  # Limitar respuesta para embedding
+                    if len(response_for_embedding) > max_response_length:
+                        response_for_embedding = response_for_embedding[:max_response_length]
+                        logger.info(f"Respuesta truncada de {len(response)} a {len(response_for_embedding)} caracteres para embedding")
+                    
+                    response_embedding = self.embedder.embed_text_safe(response_for_embedding)
+                    
+                    # Procesar en batches pequenos (uno a la vez)
                     from sklearn.metrics.pairwise import cosine_similarity
                     all_similarities = []
                     
@@ -457,7 +560,8 @@ class VerificationService:
                         batch_texts = [c.content for c in batch]
                         
                         logger.info(f"Procesando batch {i//BATCH_SIZE + 1}: chunks {i} a {i+len(batch)-1}")
-                        batch_embeddings = self.embedder.embed_texts(batch_texts)
+                        
+                        batch_embeddings = self.embedder.embed_texts_safe(batch_texts)
                         
                         # Calcular similitudes para este batch
                         batch_sims = cosine_similarity([response_embedding], batch_embeddings)[0]
@@ -473,7 +577,7 @@ class VerificationService:
                 # 2. Si no hay context_chunks, buscar en la base de datos
                 logger.info(f"Buscando fuentes en BD con linked_material_ids: {linked_material_ids}")
                 logger.info(f"Generando embedding para query: {query[:50]}...")
-                query_embedding = self.embedder.embed_text(query)
+                query_embedding = self.embedder.embed_text_safe(query)
                 
                 # Buscar fuentes relevantes
                 logger.info("Buscando fuentes relevantes en base de datos...")
@@ -655,7 +759,7 @@ class VerificationService:
         start_time = time.time()
         
         try:
-            query_embedding = self.embedder.embed_text(query)
+            query_embedding = self.embedder.embed_text_safe(query)
             chunks = self.db.semantic_search(
                 query_embedding=query_embedding,
                 top_k=top_k,

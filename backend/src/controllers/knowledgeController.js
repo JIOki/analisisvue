@@ -11,7 +11,7 @@ import { logAudit } from '../services/auditService.js';
 export const contributeKnowledge = async (req, res) => {
     try {
         const {
-            original_pool,
+            query,
             generated_answer,
             category_tags = [],
             conversation_context,
@@ -21,7 +21,7 @@ export const contributeKnowledge = async (req, res) => {
         const userId = req.user.id;
 
         // Validación básica
-        if (!original_pool.query || !generated_answer) {
+        if (!query || !generated_answer) {
             return res.status(400).json({
                 error: 'Faltan datos requeridos',
                 details: 'La pregunta original y la respuesta generada son obligatorias'
@@ -162,7 +162,7 @@ export const getContributionHistory = async (req, res) => {
         res.json({
             contributions: result.rows.map(row => ({
                 id: row.id,
-                query_preview: row.original_pool.query.substring(0, 100) + '...',
+                query_preview: row.query.substring(0, 100) + '...',
                 answer_preview: row.generated_answer.substring(0, 100) + '...',
                 category_tags: row.category_tags,
                 status: row.status,
@@ -207,7 +207,7 @@ export const getContributionStatus = async (req, res) => {
             WHERE id = $1 AND user_id = $2
         `;
 
-        const result = await pool.query(pool.queryStr, [contributionId, userId]);
+        const result = await pool.query(queryStr, [contributionId, userId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -346,7 +346,7 @@ export const getPublicContributions = async (req, res) => {
         res.json({
             contributions: result.rows.map(row => ({
                 id: row.id,
-                query: row.sanitized_pool.query,
+                query: row.sanitized_query,
                 answer: row.sanitized_answer,
                 category_tags: row.category_tags,
                 contributor_name: row.contributor_name || 'Anónimo',
@@ -420,7 +420,7 @@ export const getContributionStats = async (req, res) => {
             WHERE user_id = $1
         `;
 
-        const result = await pool.query(pool.queryStr, [userId]);
+        const result = await pool.query(queryStr, [userId]);
         const stats = result.rows[0];
 
         res.json({
