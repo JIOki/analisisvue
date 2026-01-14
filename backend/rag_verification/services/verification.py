@@ -326,7 +326,7 @@ class OllamaEmbedder:
             # Devolver ceros en caso de error para no fallar todo el proceso
             return np.zeros((len(texts), 1024), dtype=np.float32)
     
-    def embed_text_safe(self, text: str, max_chars: int = 2000) -> List[float]:
+    def embed_text_safe(self, text: str, max_chars: int = 800) -> List[float]:
         """
         Genera embedding para un texto con truncamiento seguro
         
@@ -359,7 +359,7 @@ class OllamaEmbedder:
             logger.warning(f"Error generando embedding (usando fallback de ceros): {e}")
             return [0.0] * 1024
     
-    def embed_texts_safe(self, texts: List[str], max_chars: int = 1500) -> np.ndarray:
+    def embed_texts_safe(self, texts: List[str], max_chars: int = 800) -> np.ndarray:
         """
         Genera embeddings para multiples textos con truncamiento seguro
         
@@ -509,7 +509,7 @@ class VerificationService:
             # El modelo mxbai-embed-large tiene limite ~8192 tokens de entrada total
             # Pero para estar seguros y evitar cualquier limite del API, usamos limites conservadores
             MAX_CHUNKS = 5
-            MAX_CHUNK_LENGTH = 1200  # Aproximadamente 400-500 tokens
+            MAX_CHUNK_LENGTH = 800  # Aproximadamente 400-500 tokens
             BATCH_SIZE = 1  # Procesar uno por uno
             
             # 1. Si hay context_chunks del frontend, usarlos directamente
@@ -544,7 +544,7 @@ class VerificationService:
                     
                     # Truncar respuesta si es muy larga para el embedding
                     response_for_embedding = response
-                    max_response_length = 3000  # Limitar respuesta para embedding
+                    max_response_length = 1000  # Limitar respuesta para embedding
                     if len(response_for_embedding) > max_response_length:
                         response_for_embedding = response_for_embedding[:max_response_length]
                         logger.info(f"Respuesta truncada de {len(response)} a {len(response_for_embedding)} caracteres para embedding")

@@ -5,6 +5,7 @@
 
 import { defineStore } from 'pinia';
 import verificationService from '@/service/verificationService';
+import { conversationService } from '@/service/conversationService';
 
 export const useVerificationStore = defineStore('verification', {
     state: () => ({
@@ -71,7 +72,10 @@ export const useVerificationStore = defineStore('verification', {
                 response,
                 conversationId = null,
                 userId = null,
-                linkedMaterialIds = []
+                linkedMaterialIds = [],
+                contextChunks = null,
+                contextText = null,
+                persistToDb = true  // Nueva opción para persistir en base de datos
             } = params;
 
             this.verifying = true;
@@ -83,12 +87,24 @@ export const useVerificationStore = defineStore('verification', {
                     response,
                     conversationId,
                     userId,
-                    linkedMaterialIds
+                    linkedMaterialIds,
+                    contextChunks,
+                    contextText
                 });
 
                 // Guardar verificacion por ID de mensaje
                 if (messageId) {
                     this.messageVerifications.set(messageId, result);
+                }
+
+                // Persistir en base de datos si está habilitado
+                if (persistToDb && messageId && conversationId) {
+                    try {
+                        await conversationService.saveVerification(messageId, result);
+                    } catch (dbError) {
+                        console.error('Error guardando verificación en BD:', dbError);
+                        // No fallar la verificación por error de persistencia
+                    }
                 }
 
                 // Actualizar estadisticas
@@ -218,6 +234,18 @@ export const useVerificationStore = defineStore('verification', {
             if (this.selectedMessageId === messageId) {
                 this.clearSelection();
             }
+        },
+
+        /**
+         * Carga verificaciones desde la base de datos
+         * @param {Array} messages - Lista de mensajes con verification_data
+         */
+        loadVerificationsFromMessages(messages) {
+            messages.forEach(message => {
+                if (message.verification_data && message.id) {
+                    this.messageVerifications.set(message.id, message.verification_data);
+                }
+            });
         },
 
         /**
