@@ -166,7 +166,7 @@ async function loadConversationHistory() {
 
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:4000/api/conversations/${conversationId}/messages`, {
+    const res = await fetch(`/api/conversations/${conversationId}/messages`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -288,7 +288,7 @@ async function submitPrompt() {
     // Función para crear nueva conversación
     const createConversation = async () => {
       console.log('📝 Creando nueva conversación con fuentes:', sourceIds);
-      const createRes = await fetch('http://localhost:4000/api/conversations/start', {
+      const createRes = await fetch('/api/conversations/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -328,7 +328,7 @@ async function submitPrompt() {
       message: userQuestion
     };
 
-    let res = await fetch('http://localhost:4000/api/chat', {
+    let res = await fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -347,7 +347,7 @@ async function submitPrompt() {
       payload.conversation_id = conversationId;
       console.log('🔄 Reintentando con nueva conversación:', conversationId);
       
-      res = await fetch('http://localhost:4000/api/chat', {
+      res = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

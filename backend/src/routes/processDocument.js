@@ -1,9 +1,13 @@
+/**
+ * Procesador de Documentos con Chunking Semántico
+ * Este módulo procesa documentos de múltiples formatos y los fragmenta
+ * en chunks semánticamente enriquecidos para el sistema RAG.
+ */
 
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import xlsx from 'xlsx';
 import pool from "../db.js";
-
 
 import * as cheerio from 'cheerio';
 import { fileTypeFromBuffer } from 'file-type';
@@ -13,28 +17,32 @@ import { XMLParser } from 'fast-xml-parser';
 import { DOMParser } from 'xmldom';
 import { kml } from '@tmcw/togeojson';
 import { generateEmbedding } from '../routes/embeddingService.js';
-import { generateEmbedding2 } from '../routes/embeddingService.js';
-// Al inicio de tu archivo, asegúrate de tener:
+import { semanticChunking } from '../utils/semanticChunking.js';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
-
 
 dotenv.config();
 
 const MAX_CHUNK_LENGTH = 1024;
 const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "1024", 10);
 const MAX_CHUNKS = 500;
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 5; // Reducido para procesamiento con metadata enriquecida
 
 const BASE = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 console.log('🔧 OLLAMA_BASE_URL desde env:', process.env.OLLAMA_BASE_URL);
 console.log('🔧 BASE final usado:', BASE);
 console.log('🔧 EMBEDDING_MODEL:', process.env.EMBEDDING_MODEL);
+console.log('🔧 LLM_MODEL:', process.env.LLM_MODEL);
 
-
-export async function processDocument(buffer, sourceId, client) {
-  console.log("🧠 generateEmbedding está definido:", typeof generateEmbedding);
-
+/**
+ * Procesa un documento extrayendo texto y creando chunks semánticos
+ * @param {Buffer} buffer - Buffer del archivo
+ * @param {UUID} sourceId - ID de la fuente en la base de datos
+ * @param {object} client - Cliente de base de datos
+ * @param {string} filename - Nombre del archivo
+ */
+export async function processDocument(buffer, sourceId, client, filename = 'documento') {
+  console.log(`📄 Iniciando procesamiento semántico para: ${filename}`);
 
   const fileType = await fileTypeFromBuffer(buffer);
   const mimeType = fileType?.mime || 'application/octet-stream';
@@ -42,76 +50,90 @@ export async function processDocument(buffer, sourceId, client) {
 
   console.log("📄 fileType detectado:", fileType);
 
+  try {
+    // Extraer texto según el tipo de archivo
+    rawText = await extractTextByType(buffer, mimeType);
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new Error('El documento no contiene texto útil');
+    }
+
+    console.log(`📝 Texto extraído: ${rawText.length} caracteres`);
+
+    // Chunking semántico (nuevo sistema)
+    console.log('🧠 Iniciando chunking semántico inteligente...');
+    const richChunks = await semanticChunking(rawText, {
+      filename: filename,
+      mimeType: mimeType,
+      sourceId: sourceId
+    });
+
+    console.log(`✅ Chunking completado: ${richChunks.length} chunks generados`);
+
+    // Insertar chunks con metadata enriquecida
+    const insertResult = await insertEnrichedChunks(client, sourceId, richChunks);
+
+    if (!insertResult.success) {
+      throw new Error(`❌ Falló la inserción de chunks enriquecidos`);
+    }
+
+    console.log(`🎉 Documento procesado exitosamente`);
+    console.log(`   - Chunks creados: ${insertResult.inserted}`);
+    console.log(`   - Conceptos extraídos: ${insertResult.concepts}`);
+    console.log(`   - Tiempo de procesamiento: ${insertResult.time}ms`);
+
+    return {
+      success: true,
+      chunks: insertResult.inserted,
+      concepts: insertResult.concepts,
+      categories: insertResult.categories
+    };
+
+  } catch (error) {
+    console.error(`❌ Error procesando documento: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Extrae texto según el tipo de mime
+ */
+async function extractTextByType(buffer, mimeType) {
   switch (mimeType) {
     case 'application/pdf':
-      rawText = await extractPDF(buffer);
-      break;
+      return await extractPDF(buffer);
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-      rawText = await extractDOCX(buffer);
-      break;
+      return await extractDOCX(buffer);
     case 'text/plain':
-      rawText = buffer.toString('utf-8');
-      break;
+      return buffer.toString('utf-8');
     case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-      rawText = await extractXLSX(buffer);
-      break;
+      return await extractXLSX(buffer);
     case 'text/html':
-      rawText = await extractHTML(buffer);
-      break;
+      return await extractHTML(buffer);
     case 'text/markdown':
-      rawText = await extractMarkdown(buffer);
-      break;
+      return await extractMarkdown(buffer);
     case 'text/csv':
-      rawText = await extractCSV(buffer);
-      break;
+      return await extractCSV(buffer);
     case 'application/msword':
-      rawText = await extractDOC(buffer);
-      break;
+      return await extractDOC(buffer);
     case 'application/json':
       try {
         const json = JSON.parse(buffer.toString('utf-8'));
-        rawText = json?.features
-          ? await extractGeoJSON(buffer)
-          : await extractJSON(buffer);
+        return json?.features ? await extractGeoJSON(buffer) : await extractJSON(buffer);
       } catch (err) {
         throw new Error('Error al procesar JSON: ' + err.message);
       }
-      break;
     case 'application/xml':
     case 'text/xml':
-      rawText = await extractXML(buffer);
-      break;
+      return await extractXML(buffer);
     case 'application/vnd.google-earth.kml+xml':
-      rawText = await extractKML(buffer);
-      break;
+      return await extractKML(buffer);
     default:
       throw new Error(`Formato no soportado: ${mimeType}`);
   }
-
-  if (!rawText || rawText.trim().length === 0) {
-    throw new Error('El documento no contiene texto útil');
-  }
-
-  const chunks = chunkText(rawText, MAX_CHUNK_LENGTH);
-  console.log(`✂️ Chunks generados: ${chunks.length}`);
-
-  let inserted = 0;
-
-  /*for (let index = 0; index < 2; index++) {
-    const chunk = chunks[index];
-
-    const embedding = await generateEmbedding2(chunk);*/
-  const success = await insertChunkSafely(client, sourceId, chunks, mimeType);
-  if (!success) {
-    throw new Error(`❌ Falló el insert del chunk, abortando transacción`);
-  }
-  // }
-
-  // console.log(`📥 Chunks insertados exitosamente: ${inserted} de ${chunks.length}`);
-  //console.log(`✅ Chunks insertados en BD: ${inserted}`);
 }
 
-// Extractores
+// Extractores de texto
 
 async function extractPDF(buffer) {
   const data = await pdfParse(buffer);
@@ -126,22 +148,17 @@ async function extractDOCX(buffer) {
 async function extractXLSX(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   let text = '';
-
   workbook.SheetNames.forEach(sheetName => {
     const sheet = workbook.Sheets[sheetName];
     const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
     rows.forEach(row => {
       text += row.join(' ') + '\n';
     });
-
   });
-
   return text;
 }
 
-
 async function extractHTML(buffer) {
-
   const html = buffer.toString('utf-8');
   const $ = cheerio.load(html);
   return $('body').text();
@@ -220,10 +237,145 @@ function flattenGeoFeatures(features) {
   return text;
 }
 
-function chunkText(text, maxLength) {
+/**
+ * Inserta chunks enriquecidos con metadata semántica
+ */
+export async function insertEnrichedChunks(client, sourceId, richChunks) {
+  const startTime = Date.now();
+  let inserted = 0;
+  let skipped = 0;
+  let conceptsTotal = 0;
+  const categories = {};
+
+  try {
+    for (let i = 0; i < richChunks.length; i += BATCH_SIZE) {
+      const batch = richChunks.slice(i, i + BATCH_SIZE);
+
+      for (let j = 0; j < batch.length; j++) {
+        const chunk = batch[j];
+        console.log(`💾 Insertando chunk ${i + j + 1} de ${richChunks.length}`);
+
+        try {
+          // El embedding ya viene generado del semanticChunking
+          const embedding = chunk.embedding;
+
+          if (!Array.isArray(embedding) || embedding.length === 0) {
+            console.warn(`⚠️ Chunk ${i + j + 1} sin embedding válido, generando uno...`);
+            // Intentar generar embedding como fallback (CON TRUNCAMIENTO)
+            try {
+              const truncatedText = chunk.content.length > 500
+                ? chunk.content.substring(0, 500)
+                : chunk.content;
+              console.log(`🔄 Generando embedding con texto truncado a ${truncatedText.length} caracteres`);
+              const newEmbedding = await embed(truncatedText);
+              if (Array.isArray(newEmbedding) && newEmbedding.length > 0) {
+                chunk.embedding = newEmbedding;
+                console.log(`✅ Embedding fallback generado: ${newEmbedding.length} dimensiones`);
+              } else {
+                console.warn(`⚠️ Embedding fallback vacío`);
+                skipped++;
+                continue;
+              }
+            } catch (embErr) {
+              console.warn(`⚠️ No se pudo generar embedding fallback: ${embErr.message}`);
+              skipped++;
+              continue;
+            }
+          }
+
+          // Convertir embedding a formato vector
+          const vectorString = `[${chunk.embedding.join(",")}]`;
+
+          // Insertar con todas las columnas de metadata
+          const result = await client.query(
+            `INSERT INTO chunks (
+              id,
+              source_id,
+              chunk_index,
+              content,
+              embedding,
+              summary,
+              key_concepts,
+              chunk_category,
+              abstraction_level,
+              structural_context,
+              chunk_metadata,
+              created_at
+            ) VALUES (
+              gen_random_uuid(), $1, $2, $3, $4::vector, $5, $6, $7, $8, $9, $10, NOW()
+            )`,
+            [
+              sourceId,
+              i + j,
+              chunk.content,
+              vectorString,
+              chunk.metadata.summary,
+              chunk.metadata.key_concepts,
+              chunk.metadata.chunk_category,
+              chunk.metadata.abstraction_level,
+              JSON.stringify(chunk.metadata.structural_context),
+              JSON.stringify(chunk.metadata.chunk_metadata)
+            ]
+          );
+
+          if (result.rowCount !== 1) {
+            throw new Error("Insert falló");
+          }
+
+          inserted++;
+          conceptsTotal += chunk.metadata.key_concepts.length;
+
+          // Contar por categoría
+          const cat = chunk.metadata.chunk_category;
+          categories[cat] = (categories[cat] || 0) + 1;
+
+        } catch (err) {
+          console.warn(`⚠️ Error insertando chunk ${i + j + 1}:`, err.message);
+          skipped++;
+        }
+
+        // Pausa breve entre chunks
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Pausa entre batches
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    const totalTime = Date.now() - startTime;
+
+    console.log(`✅ Inserción completada`);
+    console.log(`   - Insertados: ${inserted}`);
+    console.log(`   - Omitidos: ${skipped}`);
+    console.log(`   - Conceptos totales: ${conceptsTotal}`);
+
+    return {
+      success: true,
+      inserted: inserted,
+      skipped: skipped,
+      concepts: conceptsTotal,
+      categories: categories,
+      time: totalTime
+    };
+
+  } catch (err) {
+    console.error(`❌ Error en insertEnrichedChunks: ${err.message}`);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+/**
+ * Función legacy para chunking simple (mantenida para compatibilidad)
+ * @deprecated Usar semanticChunking en su lugar
+ */
+export function chunkTextLegacy(text, maxLength) {
   const sentences = text.split(/(?<=[.?!])\s+/);
   const chunks = [];
   let current = '';
+
   for (const sentence of sentences) {
     if ((current + sentence).length > maxLength) {
       chunks.push(current.trim());
@@ -232,97 +384,17 @@ function chunkText(text, maxLength) {
       current += ' ' + sentence;
     }
   }
+
   if (current.trim()) chunks.push(current.trim());
   return chunks;
 }
 
-
-
-
-export async function insertChunkSafely(client, sourceId, chunks, mimeType) {
-  /*console.log('🧪 typeof embedding:', typeof embedding);
-  console.log('🧪 isArray:', Array.isArray(embedding));
-  console.log('🧪 sample:', embedding.slice(0, 5));*/
-
-
-  try {
-
-    let emb;
-    let inserted = 0;
-    let skipped = 0;
-
-    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-      const batch = chunks.slice(i, i + BATCH_SIZE);
-      //if (!req.file) return res.status(400).json({ error: "Falta archivo" });
-
-      for (let j = 0; j < batch.length; j++) {
-        console.log(`🧠 Generando embedding ${i + j + 1} de ${chunks.length}`);
-        try {
-          emb = await embed(batch[j]);
-        } catch (err) {
-          console.warn(`⚠️ Error al generar embedding para chunk ${i + j + 1}:`, err.message);
-          continue; // omitir este chunk
-        }
-        //emb = await embed(batch[j]);
-        if (!Array.isArray(emb) || emb.length !== VECTOR_DIM) {
-          console.warn(`⚠️ Chunk omitido:`, batch[j].slice(0, 100));
-          skipped++;
-          continue;
-        }
-
-
-
-        console.log("🧪 Primeros 5 valores del embedding:", emb.slice(0, 5));
-
-        const vectorString = `[${emb.join(",")}]`;
-        console.log("🧪 vectorString1", vectorString.slice(0, 5));
-
-
-
-        const result = await client.query(
-          `INSERT INTO chunks(
-            id,
-            source_id,
-            chunk_index,
-            content,
-            embedding,
-          
-            created_at
-          ) VALUES (
-            gen_random_uuid(), $1, $2, $3, $4::vector, NOW()
-          )`,
-          [sourceId, i + j, batch[j], vectorString]
-        );
-        if (result.rowCount !== 1) throw new Error("❌ Insert en sources falló");
-       inserted++;
-      }
-      // 🔄 Pausa breve para liberar memoria
-      await new Promise(resolve => setTimeout(resolve, 200));
-      // 🧹 Fuerza recolección de basura si está disponible
-      if (global.gc) {
-        global.gc();
-      }
-
-
-    }
-    console.log(`✅ Chunks insertados: ${inserted}`);
-    console.log(`⚠️ Chunks omitidos: ${skipped}`);
-
-    //res.json({ ok: true, sourceId, chunks: chunks.length });
-    //console.log(`✅ Chunk ${inserted} insertado correctamente`);
-    return true;
-
-  } catch (err) {
-    console.error(`❌ Error al insertar :`, err.message);
-    return false;
-  }
-}
-
 dotenv.config();
 
-
+/**
+ * Genera embedding para un texto (función auxiliar)
+ */
 export async function embed(text) {
-
   if (!text || text.trim().length < 50) {
     console.warn('⚠️ Texto demasiado corto para generar embedding');
     return [];
@@ -349,12 +421,8 @@ export async function embed(text) {
     return [];
   }
 
-
-  // ✅ Accede correctamente al primer vector
   return data.embeddings?.[0];
 }
-
-
 
 export async function generate(prompt) {
   const res = await fetch(`${BASE}/api/generate`, {

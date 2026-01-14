@@ -49,7 +49,7 @@ const router = createRouter({
                     name: 'chatinteligente',
                     component: () => import('@/Views/pages/chatinteligente.vue')
                 },
-                 {
+                {
                     path: '/pages/Resultados',
                     name: 'Resultados',
                     component: () => import('@/Views/pages/Resultados.vue')
@@ -63,6 +63,23 @@ const router = createRouter({
                     path: '/pages/PrivacyDashboard',
                     name: 'PrivacyDashboard',
                     component: () => import('@/Views/pages/PrivacyDashboard.vue')
+                },
+                // Fase 5: Smart Chat (unificado)
+                {
+                    path: '/pages/SmartChat',
+                    name: 'SmartChat',
+                    component: () => import('@/Views/pages/SmartChat.vue')
+                },
+                // Fase 5: Historial de Conversaciones (mantenido para compatibilidad)
+                {
+                    path: '/pages/ConversationHistory',
+                    name: 'ConversationHistory',
+                    component: () => import('@/Views/pages/ConversationHistory.vue')
+                },
+                {
+                    path: '/pages/Chat/:conversationId?',
+                    name: 'ChatWithContext',
+                    component: () => import('@/Views/pages/ChatWithContext.vue')
                 },
             ]
         },

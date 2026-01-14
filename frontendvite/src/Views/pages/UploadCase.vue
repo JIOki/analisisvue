@@ -216,7 +216,7 @@ function saveMaterial() {
        console.warn('⚠️ Título y archivo son obligatorios');
        return;
      }
-     const res = await fetch('http://localhost:4000/api/material/upload', {
+     const res = await fetch('/api/material/upload', {
        method: 'POST',
        body: formData
      });
@@ -246,7 +246,7 @@ async function uploadMaterial() {
 
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:4000/api/material/upload', {
+    const res = await fetch('/api/material/upload', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -300,7 +300,7 @@ const materialFilters = ref({
 
 /*async function fetchMaterials() {
   try {
-    const res = await fetch('http://localhost:4000/api/material/list');
+    const res = await fetch('/api/material/list');
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     materials.value = data;
@@ -311,7 +311,7 @@ const materialFilters = ref({
 }*/
 /*async function fetchMaterials() {
   try {
-    const res = await fetch('http://localhost:4000/api/material/list');
+    const res = await fetch('/api/material/list');
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
 
@@ -327,7 +327,7 @@ const materialFilters = ref({
 //FUNCIONA 29/09/2025
 /*async function fetchMaterials() {
   try {
-    const res = await fetch('http://localhost:4000/api/material/list');
+    const res = await fetch('/api/material/list');
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
 
@@ -348,7 +348,7 @@ const materialFilters = ref({
 async function fetchMaterials() {
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:4000/api/material/list', {
+    const res = await fetch('/api/material/list', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -410,7 +410,7 @@ async function saveMaterialEdit() {
 
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:4000/api/material/update/${editingMaterial.value.id}`, {
+    const res = await fetch(`/api/material/update/${editingMaterial.value.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

@@ -138,13 +138,55 @@ router.get('/conversations/:id/messages', authenticateToken, async (req, res) =>
     }
     
     const result = await db.query(
-      'SELECT role, content, created_at FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
+      `SELECT id, role, content, created_at, verification_data 
+       FROM messages 
+       WHERE conversation_id = $1 
+       ORDER BY created_at ASC`,
       [id]
     );
     res.json(result.rows);
   } catch (err) {
     console.error('Error al recuperar mensajes:', err.message);
     res.status(500).json({ error: 'No se pudo recuperar el historial' });
+  }
+});
+
+// Endpoint para guardar datos de verificación de un mensaje
+// PATCH /api/messages/:messageId/verification
+router.patch('/messages/:messageId/verification', authenticateToken, async (req, res) => {
+  const { messageId } = req.params;
+  const { verification_data } = req.body;
+  
+  try {
+    // Verificar que el mensaje existe y pertenece a una conversación del usuario
+    const messageCheck = await db.query(
+      `SELECT m.id FROM messages m
+       INNER JOIN conversations c ON m.conversation_id = c.id
+       WHERE m.id = $1 AND c.user_id = $2`,
+      [messageId, req.user.id]
+    );
+    
+    if (messageCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Mensaje no encontrado o no autorizado' });
+    }
+    
+    // Actualizar verification_data
+    const result = await db.query(
+      `UPDATE messages 
+       SET verification_data = $1, updated_at = NOW()
+       WHERE id = $2 
+       RETURNING id, verification_data, updated_at`,
+      [JSON.stringify(verification_data), messageId]
+    );
+    
+    res.json({
+      message: 'Verificación guardada correctamente',
+      message_id: messageId,
+      verification_data: result.rows[0].verification_data
+    });
+  } catch (err) {
+    console.error('Error al guardar verificación:', err.message);
+    res.status(500).json({ error: 'No se pudo guardar la verificación' });
   }
 });
 

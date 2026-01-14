@@ -13,14 +13,14 @@ const toast = useToast();
 const handleLogout = async () => {
     try {
         await authStore.logout();
-        
+
         toast.add({
             severity: 'success',
             summary: 'Sesión Cerrada',
             detail: 'Has cerrado sesión correctamente',
             life: 3000
         });
-        
+
         router.push('/auth/login');
     } catch (error) {
         toast.add({
@@ -42,7 +42,7 @@ const model = ref([
                 label: 'Biblioteca Marco Teorica',
                 icon: 'pi pi-fw pi-book',
                 to: '/pages/uploadtheory'
-            }, 
+            },
             {
                 label: 'Biblioteca de casos de uso',
                 icon: 'pi pi-fw pi-folder',
@@ -53,7 +53,8 @@ const model = ref([
                 icon: 'pi pi-fw pi-chart-bar',
                 to: '/pages/Resultados'
             },
-            {
+            
+           /* {
                 label: 'Chat Inteligente',
                 icon: 'pi pi-fw pi-comments',
                 to: '/pages/chatinteligente'
@@ -63,36 +64,58 @@ const model = ref([
                 icon: 'pi pi-fw pi-comment',
                 to: '/pages/chatvue'
             },
+            
+           
+           
+              {
+                label: 'Historial de Conversaciones',
+                icon: 'pi pi-fw pi-history',
+                to: '/pages/ConversationHistory'
+            },
+          {
+                label: 'Chat con Contexto',
+                icon: 'pi pi-fw pi-database',
+                to: '/pages/Chat'
+            },*/
             {
+                label: 'Smart Chat (NUEVO)',
+                icon: 'pi pi-fw pi-sparkles',
+                to: '/pages/SmartChat'
+            },
+             {
                 label: 'Centro de Privacidad',
                 icon: 'pi pi-fw pi-shield',
                 to: '/pages/PrivacyDashboard'
+            },
+             {
+                separator: true
             },
         ]
     },
     {
         label: 'Share',
         items: [
-            { 
-                label: 'Materiales compartidos', 
-                icon: 'pi pi-fw pi-share-alt', 
-                to: '/' 
+            {
+                label: 'Materiales compartidos',
+                icon: 'pi pi-fw pi-share-alt',
+                to: '/'
             },
         ]
     },
     {
         label: 'Mi Cuenta',
         items: [
-            { 
-                label: 'Mi Perfil', 
-                icon: 'pi pi-fw pi-user', 
-                to: '/profile' 
+            {
+                label: 'Mi Perfil',
+                icon: 'pi pi-fw pi-user',
+                to: '/profile'
             },
-            { 
-                label: 'Cerrar Sesión', 
-                icon: 'pi pi-fw pi-sign-out', 
+            {
+                label: 'Cerrar Sesión',
+                icon: 'pi pi-fw pi-sign-out',
                 command: handleLogout
             },
+
         ]
     }
 ]);

@@ -311,7 +311,7 @@ function formatDate(dateString) {
                     
                     <!-- Indicador de categoría -->
                     <div class="category-badge mb-4">
-                        <Tag :severity="isTheoreticalCategory ? 'info' : 'warning'" :value="isTheoreticalCategory ? 'Marco Teórico (público por defecto)' : 'Caso de Uso (privado por defecto')" />
+                        <Tag :severity="isTheoreticalCategory ? 'info' : 'warning'" :value="isTheoreticalCategory ? 'Marco Teórico (público por defecto)' : 'Caso de Uso (privado por defecto)'" />
                     </div>
                     
                     <!-- Toggle de privacidad -->
@@ -668,11 +668,12 @@ function formatDate(dateString) {
 .config-header h4 {
     margin: 0 0 0.5rem 0;
     font-size: 1.1rem;
+    color: #e0e0e0;
 }
 
 .config-header p {
     margin: 0;
-    color: var(--text-color-secondary);
+    color: #a0a0b0;
 }
 
 .privacy-toggle-container {
@@ -680,8 +681,8 @@ function formatDate(dateString) {
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    background: var(--surface-0);
-    border: 1px solid var(--surface-200);
+    background: #252540;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
 }
 
@@ -696,14 +697,16 @@ function formatDate(dateString) {
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
+    color: #e0e0e0;
 }
 
 .toggle-label i {
     font-size: 1.3rem;
+    color: #60A5FA;
 }
 
 .toggle-description {
-    color: var(--text-color-secondary);
+    color: #a0a0b0;
     font-size: 0.9rem;
     margin: 0;
     padding-right: 1rem;
@@ -721,19 +724,21 @@ function formatDate(dateString) {
     gap: 1rem;
     margin-top: 1rem;
     padding: 1rem;
-    background: var(--surface-50);
+    background: #1e1e30;
     border-radius: 8px;
+    color: #c0c0c0;
 }
 
 .privacy-info .info-item {
     display: flex;
     align-items: center;
     font-size: 0.9rem;
-    color: var(--text-color-secondary);
+    color: #a0a0b0;
 }
 
 .shared-users-list h5 {
     margin-bottom: 1rem;
+    color: #e0e0e0;
 }
 
 .shared-user-item {
@@ -746,11 +751,12 @@ function formatDate(dateString) {
 .no-shared-users {
     text-align: center;
     padding: 2rem;
-    color: var(--text-color-secondary);
+    color: #909090;
 }
 
 .no-shared-users i {
     margin-bottom: 1rem;
+    color: #606070;
 }
 
 .info-section {
@@ -761,18 +767,19 @@ function formatDate(dateString) {
     display: flex;
     align-items: center;
     margin-bottom: 0.5rem;
-    color: var(--text-color);
+    color: #e0e0e0;
 }
 
 .info-section p {
     margin: 0;
-    color: var(--text-color-secondary);
+    color: #a0a0b0;
     line-height: 1.6;
 }
 
 /* Share Dialog */
 .share-dialog-content .shared-material-info {
-    background: var(--surface-100);
+    background: #1e1e30;
+    color: #e0e0e0;
 }
 
 .user-selection-list {
@@ -785,7 +792,8 @@ function formatDate(dateString) {
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem;
-    border-bottom: 1px solid var(--surface-200);
+    background: #252540;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .user-select-item:last-child {
@@ -795,12 +803,14 @@ function formatDate(dateString) {
 .user-details {
     display: flex;
     align-items: center;
+    color: #e0e0e0;
 }
 
 .selected-summary {
-    background: var(--surface-50);
+    background: #1e1e30;
     display: flex;
     align-items: center;
+    color: #c0c0c0;
 }
 
 /* Disclaimer Dialog */
@@ -811,24 +821,29 @@ function formatDate(dateString) {
 .disclaimer-text {
     font-weight: 600;
     margin-bottom: 1rem;
+    color: #e0e0e0;
 }
 
 .disclaimer-list {
     padding-left: 1.5rem;
     line-height: 1.8;
+    color: #c0c0c0;
 }
 
 .disclaimer-acceptance {
     display: flex;
     align-items: center;
     padding: 1rem;
-    background: var(--surface-50);
+    background: #1e1e30;
     border-radius: 8px;
+    color: #c0c0c0;
 }
 
 /* History Timeline */
 .history-entry {
     padding: 0.5rem;
+    background: #252540;
+    border-radius: 8px;
 }
 
 .entry-header {
@@ -838,16 +853,17 @@ function formatDate(dateString) {
 
 .entry-date {
     font-size: 0.85rem;
-    color: var(--text-color-secondary);
+    color: #a0a0b0;
 }
 
 .entry-details p {
     margin: 0.25rem 0;
     font-size: 0.9rem;
+    color: #c0c0c0;
 }
 
 .no-history {
-    color: var(--text-color-secondary);
+    color: #909090;
 }
 
 @media (max-width: 768px) {

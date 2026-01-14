@@ -13,7 +13,7 @@ import chatRoutes from './routes/chatRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import privacyRoutes from './routes/privacyRoutes.js';
 import knowledgeRoutes from './routes/knowledgeRoutes.js';
-
+import conversationHistoryRoutes from './routes/conversationHistoryRoutes.js';
 
 
 
@@ -25,6 +25,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use("/api/auth", authRoutes);
 app.use("/api", conversationRoutes); 
 app.use("/api", chatRoutes);
+app.use("/api", conversationHistoryRoutes); // Fase 5: Historial de conversaciones
 app.use("/api/material", materialRoutes);
 app.use("/api/material", uploadMaterial);
 app.use("/api/records", uploadRecords);

@@ -54,16 +54,17 @@
               <Button 
                 label="Iniciar Sesión" 
                 type="submit"
-                class="w-full p-3 text-xl" 
+                class="w-full p-3 text-xl login-btn" 
                 :loading="loading"
                 :disabled="loading"
+                style="color: black !important;"
               />
             </div>
           </form>
 
           <div class="text-center mt-5">
             <span class="text-600 font-medium">¿No tienes una cuenta? </span>
-            <router-link to="/auth/register" class="font-medium no-underline text-primary cursor-pointer">
+            <router-link to="/auth/register" class="font-medium no-underline text-primary cursor-pointer register-link">
               Regístrate aquí
             </router-link>
           </div>
@@ -166,5 +167,39 @@ const handleLogin = async () => {
 
 .min-w-screen {
   min-width: 100vw;
+}
+
+/* Estilos de respaldo para el botón */
+:deep(.p-button) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+:deep(.p-button-label) {
+  font-weight: 600;
+  color: var(--primary-color-text, #ffffff);
+}
+
+.login-btn {
+  min-height: 3.5rem;
+}
+
+.login-btn::before {
+  content: "Iniciar Sesión";
+  display: inline-block;
+}
+
+.login-btn:has(.p-button-label)::before {
+  display: none;
+}
+
+.register-link {
+  font-weight: 600;
+}
+
+.register-link:hover {
+  text-decoration: underline;
 }
 </style>
