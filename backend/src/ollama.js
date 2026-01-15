@@ -49,7 +49,7 @@ export async function sendMessage(message, context = null) {
   }
   
   // Si el contexto viene embebido en el primer parámetro (como hace conversationRoutes)
-  if (message && message.includes('Contexto relevante:')) {
+  if (message && (message.includes('=== CONTEXTO ===') || message.includes('Contexto relevante:'))) {
     return await sendMessageWithContext(message, message);
   }
 
