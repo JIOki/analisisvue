@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 
 
 const upload = multer({
-  dest: process.env.UPLOAD_DIR || "./uploads",
+  dest: path.join(process.cwd(), 'uploads', 'temp'),
   limits: { fileSize: 10 * 1024 * 1024 } // ✅ Limita a 10MB
 });
 
@@ -42,6 +42,8 @@ async function extractText(filePath, mimetype, originalname) {
 }
 
 router.post("/", authenticateToken, upload.single("file"), async (req, res) => {
+  let userFilePath = null;
+  
   try {
     const { title, author, tags, owner } = req.body;
     const userId = req.user.id; // Obtenido desde JWT
@@ -63,9 +65,9 @@ router.post("/", authenticateToken, upload.single("file"), async (req, res) => {
 
     const sourceId = uuidv4();
     await pool.query(
-      `INSERT INTO sources(id, title, author, tags, owner, kind, user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [sourceId, title || req.file.originalname, author || null, tags ? tags.split(",").map(s => s.trim()) : null, owner || null, "doc", userId]
+      `INSERT INTO sources(id, title, author, tags, owner, kind, user_id, file_path)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [sourceId, title || req.file.originalname, author || null, tags ? tags.split(",").map(s => s.trim()) : null, owner || null, "doc", userId, null]
     );
     console.log(`📄 Fragmentos a procesar: ${chunks.length}`);
 
@@ -100,12 +102,43 @@ router.post("/", authenticateToken, upload.single("file"), async (req, res) => {
 
     }
 
+    // ✅ AL FINAL: Copiar archivo a la carpeta del usuario
+    const userUploadDir = path.join(process.cwd(), 'uploads', userId.toString());
+    await fs.ensureDir(userUploadDir);
+    
+    // Mantener el nombre original del archivo, evitar sobreescritura
+    let finalFileName = req.file.originalname;
+    let filePath = path.join(userUploadDir, finalFileName);
+    
+    // Si ya existe un archivo con ese nombre, agregar timestamp
+    let counter = 1;
+    while (await fs.pathExists(filePath)) {
+      const ext = path.extname(req.file.originalname);
+      const baseName = path.basename(req.file.originalname, ext);
+      finalFileName = `${baseName}_${Date.now()}_${counter}${ext}`;
+      filePath = path.join(userUploadDir, finalFileName);
+      counter++;
+    }
+    
+    userFilePath = filePath;
+    await fs.copy(req.file.path, userFilePath);
+    console.log(`📁 Copia guardada en: ${userFilePath}`);
+
+    // Actualizar el registro con la ruta del archivo
+    await pool.query(
+      `UPDATE sources SET file_path = $1 WHERE id = $2`,
+      [userFilePath, sourceId]
+    );
+
     res.json({ ok: true, sourceId, chunks: chunks.length });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e.message || e) });
   } finally {
-    if (req.file) fs.remove(req.file.path).catch(() => {});
+    // Limpiar archivo temporal de Multer
+    if (req.file && req.file.path) {
+      await fs.remove(req.file.path).catch(() => {});
+    }
   }
 });
 

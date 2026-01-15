@@ -4,6 +4,8 @@ import bcrypt from 'bcrypt';
 import { body, validationResult } from 'express-validator';
 import db from '../db.js';
 import { authenticateToken, generateToken } from '../middleware/authMiddleware.js';
+import fs from 'fs-extra';
+import path from 'path';
 
 const router = Router();
 const SALT_ROUNDS = 12;
@@ -62,6 +64,11 @@ router.post('/register',
       );
 
       const newUser = result.rows[0];
+
+      // Crear carpeta personal del usuario para documentos
+      const userUploadPath = path.join(process.cwd(), 'uploads', newUser.id.toString());
+      await fs.ensureDir(userUploadPath);
+      console.log(`📁 Carpeta creada para usuario ${newUser.id}: ${userUploadPath}`);
 
       // Generar token
       const token = generateToken(newUser.id);

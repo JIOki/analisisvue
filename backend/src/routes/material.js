@@ -1,6 +1,4 @@
 
-
-
 import { Router } from "express";
 import pool from "../db.js"; // ✅ conexión a la BD
 import { processDocument } from "../routes/processDocument.js";
@@ -9,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { readFile } from 'fs/promises';
 import fs from 'fs-extra';
 import { authenticateToken } from '../middleware/authMiddleware.js';
+import path from 'path';
 
 
 
@@ -16,7 +15,7 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 
 const router = Router();
-const uploadMiddleware = multer({ dest: "uploads/" }).single("file");
+const uploadMiddleware = multer({ dest: path.join(process.cwd(), 'uploads', 'temp') }).single("file");
 
 
 router.post("/upload", authenticateToken, uploadMiddleware, async (req, res) => {
@@ -89,6 +88,32 @@ router.post("/upload", authenticateToken, uploadMiddleware, async (req, res) => 
     console.log('✅ IdSource', sourceId);
 
     await processDocument(buffer, sourceId, client);
+
+    // ✅ COPIAR archivo a la carpeta del usuario después de procesar
+    const userUploadDir = path.join(process.cwd(), 'uploads', user_id.toString());
+    await fs.ensureDir(userUploadDir);
+    
+    // Generar nombre único si ya existe
+    let finalFileName = req.file.originalname;
+    let userFilePath = path.join(userUploadDir, finalFileName);
+    let counter = 1;
+    while (await fs.pathExists(userFilePath)) {
+      const ext = path.extname(req.file.originalname);
+      const baseName = path.basename(req.file.originalname, ext);
+      finalFileName = `${baseName}_${Date.now()}_${counter}${ext}`;
+      userFilePath = path.join(userUploadDir, finalFileName);
+      counter++;
+    }
+    
+    // Copiar archivo a la carpeta del usuario
+    await fs.copy(req.file.path, userFilePath);
+    console.log(`📁 Copia guardada en: ${userFilePath}`);
+
+    // Actualizar el path en la base de datos
+    await client.query(
+      `UPDATE sources SET path = $1 WHERE id = $2`,
+      [userFilePath, sourceId]
+    );
 
     await client.query('COMMIT');
 
