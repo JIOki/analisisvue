@@ -171,19 +171,30 @@ router.patch('/messages/:messageId/verification', authenticateToken, async (req,
     }
     
     // Actualizar verification_data
-    const result = await db.query(
-      `UPDATE messages 
-       SET verification_data = $1, updated_at = NOW()
-       WHERE id = $2 
-       RETURNING id, verification_data, updated_at`,
-      [JSON.stringify(verification_data), messageId]
-    );
-    
-    res.json({
-      message: 'Verificación guardada correctamente',
-      message_id: messageId,
-      verification_data: result.rows[0].verification_data
-    });
+    try {
+        const result = await db.query(
+            `UPDATE messages
+             SET verification_data = $1
+             WHERE id = $2
+             RETURNING id, verification_data`,
+            [JSON.stringify(verification_data), messageId]
+        );
+
+        res.json({
+            message: 'Verificación guardada correctamente',
+            message_id: messageId,
+            verification_data: result.rows[0].verification_data
+        });
+    } catch (err) {
+        console.error('Error al guardar verificación:', err.message);
+        console.error('Error completo:', err);
+        console.error('verification_data type:', typeof verification_data);
+        console.error('verification_data length:', verification_data ? JSON.stringify(verification_data).length : 'null');
+        res.status(500).json({
+            error: 'No se pudo guardar la verificación',
+            details: err.message
+        });
+    }
   } catch (err) {
     console.error('Error al guardar verificación:', err.message);
     res.status(500).json({ error: 'No se pudo guardar la verificación' });

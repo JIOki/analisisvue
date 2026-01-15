@@ -423,22 +423,33 @@ async function sendMessage() {
   scrollToBottom();
 
   try {
-    const result = await conversationStore.sendChatMessage(selectedConversationId.value, message);
+    await conversationStore.sendChatMessage(selectedConversationId.value, message);
     
-    // Si el resultado contiene mensajes actualizados con IDs reales, actualizar el store
-    if (result.assistant_message && result.assistant_message.id) {
-      // Reemplazar el último mensaje del asistente (sin ID) por el mensaje real con ID
-      const msgs = conversationStore.conversationMessages;
-      if (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant') {
-        msgs[msgs.length - 1] = result.assistant_message;
-      }
-    }
-    
+    // Scroll y focus
     scrollToBottom();
     focusInput();
     
-    // Auto-verify the last assistant message
-    await verifyLastAssistantMessage();
+    // Auto-verify el mensaje del asistente - esperar a que se actualice el store
+    let attempts = 0;
+    let assistantMessageId = null;
+    
+    while (attempts < 10 && !assistantMessageId) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const msgs = conversationStore.conversationMessages;
+      const lastAssistant = msgs.filter(m => m.role === 'assistant').pop();
+      
+      if (lastAssistant?.id) {
+        assistantMessageId = lastAssistant.id;
+      }
+      attempts++;
+    }
+    
+    if (assistantMessageId) {
+      await verifyAssistantMessageById(assistantMessageId);
+    } else {
+      console.warn('No se pudo obtener ID del mensaje del asistente después de 2 segundos');
+    }
     
   } catch (error) {
     console.error('Error sending message:', error);
@@ -455,6 +466,46 @@ async function sendMessage() {
 }
 
 // Verification functions
+/**
+ * Verifica un mensaje específico por su ID
+ * @param {string} messageId - ID del mensaje a verificar
+ */
+async function verifyAssistantMessageById(messageId) {
+  if (!messageId) return;
+  
+  const messages = conversationStore.conversationMessages;
+  const msgIndex = messages.findIndex(m => m.id === messageId);
+  
+  if (msgIndex === -1) {
+    console.warn('No se encontró el mensaje con ID:', messageId);
+    return;
+  }
+  
+  if (msgIndex === 0) return;
+  
+  const assistantMsg = messages[msgIndex];
+  const userMsg = messages[msgIndex - 1];
+  
+  if (!userMsg || userMsg.role !== 'user') return;
+  
+  try {
+    await verificationStore.verifyMessage({
+      messageId: messageId,  // Usar el ID del mensaje del store
+      query: userMsg.content,
+      response: assistantMsg.content,
+      conversationId: selectedConversationId.value,
+      linkedMaterialIds: linkedMaterials.value.map(m => m.source_id),
+      contextChunks: conversationStore.lastContextChunks
+    });
+  } catch (error) {
+    console.error('Error verifying message by ID:', error);
+  }
+}
+
+/**
+ * Verifica el último mensaje del asistente (versión legacy)
+ * @deprecated Usar verifyAssistantMessageById en su lugar
+ */
 async function verifyLastAssistantMessage() {
   const messages = conversationStore.conversationMessages;
   const lastAssistantMsg = messages.filter(m => m.role === 'assistant').pop();
@@ -463,29 +514,11 @@ async function verifyLastAssistantMessage() {
   
   // Verificar que tenemos el ID real del mensaje
   if (!lastAssistantMsg.id) {
-    console.warn('El mensaje del asistente no tiene ID, buscando en respuestas recientes...');
+    console.warn('El mensaje del asistente no tiene ID');
     return;
   }
   
-  // Find the user message that preceded this assistant message
-  const msgIndex = messages.indexOf(lastAssistantMsg);
-  if (msgIndex === 0) return;
-  
-  const userMsg = messages[msgIndex - 1];
-  if (!userMsg || userMsg.role !== 'user') return;
-  
-  try {
-    await verificationStore.verifyMessage({
-      messageId: lastAssistantMsg.id,  // Usar ID real de la BD
-      query: userMsg.content,
-      response: lastAssistantMsg.content,
-      conversationId: selectedConversationId.value,
-      linkedMaterialIds: linkedMaterials.value.map(m => m.source_id),
-      contextChunks: conversationStore.lastContextChunks
-    });
-  } catch (error) {
-    console.error('Error verifying message:', error);
-  }
+  await verifyAssistantMessageById(lastAssistantMsg.id);
 }
 
 function viewVerification(messageIndex) {

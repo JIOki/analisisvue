@@ -13,9 +13,28 @@ function getAuthHeaders() {
 }
 
 async function handleResponse(response) {
-    const data = await response.json().catch(() => ({}));
+    // Obtener el texto primero para debugging
+    const responseText = await response.text();
+
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (e) {
+        // Si no es JSON, usar el texto directamente
+        data = { error: responseText };
+    }
+
     if (!response.ok) {
-        throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
+        //优先使用 data.error，其次使用 data.details，最后使用状态码和状态文本
+        const errorMessage = data.error || data.details || `Error ${response.status}: ${response.statusText}`;
+        console.error('API Error:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: data.error,
+            details: data.details,
+            response: responseText.substring(0, 500)
+        });
+        throw new Error(errorMessage);
     }
     return data;
 }

@@ -71,19 +71,43 @@ export async function executeRAGQuery(userId, question, options = {}) {
 
     // Paso 4: Generar respuesta usando el modelo de lenguaje
     console.log('🤖 Generando respuesta con el modelo de lenguaje...');
-    const prompt = `Eres un asistente experto que responde preguntas basándose en el contexto proporcionado.
+    const prompt = `Eres un EXPERTO MASTER en el tema del contexto proporcionado. Tu misión es convertirte en el mayor especialista posible en este material y transmitir el conocimiento de forma clara y profunda.
+
+INSTRUCCIONES DE CONTROL:
+- Cuando el usuario te diga "ya no escribas nada", "para", "suficiente", "stop", "no escribas más", o frases similares, DEBES detenerte INMEDIATAMENTE sin generar más contenido.
+- No continues generando texto después de recibir una instrucción de parada.
+- No uses listas, markdown, ni formatos elaborados cuando el usuario pide que te detengas.
+- Respeta siempre las instrucciones de parada del usuario.
+
+MODO EXPERTO:
+1. ANTES de responder, ANALIZA el contexto profundamente:
+   - Identifica los CONCEPTOS CLAVE del material
+   - Descubre las RELACIONES entre las ideas principales
+   - Detecta PATRONES, tendencias o principios fundamentales
+   - Reconoce los ARGUMENTOS o puntos más importantes del autor
+
+2. Entiende el tema como un EXPERTO:
+   - No te limites a repetir información, COMPRÉNDELA
+   - Identifica CAUSA Y EFECTO en los conceptos
+   - Reconoce CONTEXTO HISTÓRICO o antecedentes si los hay
+   - Encuentra EJEMPLOS y EVIDENCIAS que respaldan cada idea
+
+3. Estructura tu conocimiento como un MAESTRO:
+   - Si el usuario pide una explicación, ve de LO SIMPLE A LO COMPLEJO
+   - Usa ANALOGÍAS para hacer difícil lo fácil de entender
+   - Conecta conceptos nuevos con conocimientos previos
+   - Destaca lo más IMPORTANTE y RELEVANTE del material
+
+4. Para RESPONDER PREGUNTAS ESPECÍFICAS:
+   - Usa el contexto para dar respuestas PRECISAS y FUNDAMENTADAS
+   - Si la respuesta no está en el contexto, dilo honestamente
+   - CITA las fuentes (título del documento) para cada afirmación importante
+   - Si hay información contradictoria, analízala y preséntala claramente
 
 Contexto disponible:
 ${context}
 
 Pregunta del usuario: ${question}
-
-Instrucciones:
-1. Responde basándote exclusivamente en la información del contexto proporcionado.
-2. Si la información no está en el contexto, indícalo claramente.
-3. Cita las fuentes cuando sea posible indicando el título del documento.
-4. Si hay información contradictoria en el contexto, menciónalo.
-5. Proporciona una respuesta clara, concisa y útil.
 
 Respuesta:`;
 
