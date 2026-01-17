@@ -4,7 +4,7 @@ import AppMenu from './AppMenu.vue';
 
 <template>
     <!-- Glassmorphism Sidebar -->
-    <div class="layout-sidebar fixed top-20 lg:top-24 left-0 h-[calc(100vh-5rem)] lg:h-[calc(100vh-7.5rem)] w-96 glass-card border-r border-glass-border overflow-hidden transition-all duration-300 animate-glass-fade">
+    <div class="layout-sidebar overflow-x-auto whitespace-nowrap fixed top-20 lg:top-24 left-0 h-[calc(100vh-5rem)] lg:h-[calc(100vh-7.5rem)] w-96 glass-card border-r border-glass-border overflow-hidden transition-all duration-300 animate-glass-fade">
         <!-- Sidebar Content -->
         <div class="h-full flex flex-col">
             <!-- Menu Content -->
@@ -62,6 +62,7 @@ import AppMenu from './AppMenu.vue';
     transform: translateX(0);
     transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     z-index: 999;
+    
 }
 
 /* Scrollbar Styling for Sidebar */

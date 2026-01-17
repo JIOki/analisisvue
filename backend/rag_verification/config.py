@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     
     # Ollama
     ollama_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    embedding_model: str = os.getenv("EMBEDDING_MODEL", "mxbai-embed-large")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
     
     # Verificación
     similarity_threshold: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.7"))

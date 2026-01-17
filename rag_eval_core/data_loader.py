@@ -197,7 +197,7 @@ class DocumentLoader:
             relevantes basándose en el significado, no solo en palabras clave. Esto
             mejora significativamente la recuperación de información en sistemas RAG.
             
-            Modelos como mxbai-embed-large generan embeddings de alta calidad con
+            Modelos como nomic-embed-text generan embeddings de alta calidad con
             1024 dimensiones, capturando matices semánticos complejos del texto.
             """,
             

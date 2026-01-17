@@ -1,4 +1,5 @@
 
+
 import { Router } from "express";
 import pool from "../db.js"; // ✅ conexión a la BD
 import { processDocument } from "../routes/processDocument.js";
@@ -93,17 +94,9 @@ router.post("/upload", authenticateToken, uploadMiddleware, async (req, res) => 
     const userUploadDir = path.join(process.cwd(), 'uploads', user_id.toString());
     await fs.ensureDir(userUploadDir);
     
-    // Generar nombre único si ya existe
-    let finalFileName = req.file.originalname;
-    let userFilePath = path.join(userUploadDir, finalFileName);
-    let counter = 1;
-    while (await fs.pathExists(userFilePath)) {
-      const ext = path.extname(req.file.originalname);
-      const baseName = path.basename(req.file.originalname, ext);
-      finalFileName = `${baseName}_${Date.now()}_${counter}${ext}`;
-      userFilePath = path.join(userUploadDir, finalFileName);
-      counter++;
-    }
+    // Generar nombre con versionado si ya existe archivo con mismo nombre base
+    const finalFileName = await getNextVersionFilename(userUploadDir, req.file.originalname);
+    const userFilePath = path.join(userUploadDir, finalFileName);
     
     // Copiar archivo a la carpeta del usuario
     await fs.copy(req.file.path, userFilePath);
@@ -346,5 +339,51 @@ router.put("/update/:id", authenticateToken, async (req, res) => {
 
 
 
+
+
+/**
+ * Genera el siguiente nombre de archivo con versionado automático
+ * Ejemplo: "Reporte.pdf" → "Reporte_v2.pdf" (si ya existe Reporte.pdf)
+ * @param {string} dir - Directorio del usuario
+ * @param {string} filename - Nombre original del archivo
+ * @returns {string} - Nombre de archivo con versión
+ */
+async function getNextVersionFilename(dir, filename) {
+  const ext = path.extname(filename);
+  const baseName = path.basename(filename, ext);
+  
+  // Buscar archivos existentes con el mismo nombre base
+  const files = await fs.readdir(dir);
+  
+  // Buscar versiones existentes (archivo_base.pdf, archivo_base_v2.pdf, etc.)
+  const versionPattern = new RegExp(`^${escapeRegex(baseName)}(_v(\\d+))?${escapeRegex(ext)}$`);
+  
+  let maxVersion = 0;
+  
+  for (const file of files) {
+    const match = file.match(versionPattern);
+    if (match) {
+      const versionNum = match[2] ? parseInt(match[2]) : 1; // Si no tiene _v, es versión 1
+      if (versionNum > maxVersion) {
+        maxVersion = versionNum;
+      }
+    }
+  }
+  
+  // Generar nuevo nombre con versión incrementada
+  const nextVersion = maxVersion + 1;
+  if (nextVersion === 1) {
+    return filename; // Primera versión, usar nombre original
+  }
+  
+  return `${baseName}_v${nextVersion}${ext}`;
+}
+
+/**
+ * Escapa caracteres especiales para expresiones regulares
+ */
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 export default router;

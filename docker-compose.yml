@@ -63,7 +63,7 @@ services:
       - DB_PASS=ragpass
       - DB_PORT=5432
       - OLLAMA_BASE_URL=http://ollama:11434
-      - EMBEDDING_MODEL=mxbai-embed-large
+      - EMBEDDING_MODEL=nomic-embed-text
       - LLM_MODEL=gemma3
       - JWT_SECRET=oFu3PmRzGSbkDM4wJ8ogrATQGafLtvbOz9AQjTj291c=
       - JWT_EXPIRES_IN=24h

@@ -79,7 +79,7 @@ DB_PASSWORD=ragpass
 # Extensión pgvector
 # -----------------------------------------------------------------------------
 # Dimensión de vectores (debe coincidir con el modelo de embedding)
-VECTOR_DIM=1024
+VECTOR_DIM=768
 
 # -----------------------------------------------------------------------------
 # JWT - Autenticación
@@ -94,7 +94,7 @@ JWT_EXPIRES_IN=24h
 # URL del servidor Ollama local
 OLLAMA_BASE_URL=http://localhost:11434
 # Modelo de embedding configurado
-EMBEDDING_MODEL=mxbai-embed-large
+EMBEDDING_MODEL=nomic-embed-text
 # Modelo LLM para generación de respuestas
 LLM_MODEL=gemma3
 

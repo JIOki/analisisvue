@@ -39,20 +39,16 @@ const model = ref([
         to: '/pages',
         items: [
             {
-                label: 'Biblioteca Marco Teorica',
+                label: 'Biblioteca de Materiales',
                 icon: 'pi pi-fw pi-book',
                 to: '/pages/uploadtheory'
             },
-            {
+            /*{
                 label: 'Biblioteca de casos de uso',
                 icon: 'pi pi-fw pi-folder',
                 to: '/pages/uploadcase'
-            },
-            {
-                label: 'Biblioteca de resultados',
-                icon: 'pi pi-fw pi-chart-bar',
-                to: '/pages/Resultados'
-            },
+            },*/
+          
             
            /* {
                 label: 'Chat Inteligente',
@@ -81,6 +77,10 @@ const model = ref([
                 label: 'Smart Chat (NUEVO)',
                 icon: 'pi pi-fw pi-sparkles',
                 to: '/pages/SmartChat'
+            },  {
+                label: 'Biblioteca de resultados',
+                icon: 'pi pi-fw pi-chart-bar',
+                to: '/pages/Resultados'
             },
              {
                 label: 'Centro de Privacidad',

@@ -56,7 +56,7 @@ El servicio lee las siguientes variables de entorno:
 | `DB_PASS` | `ragpass` | Contraseña de PostgreSQL |
 | `DB_NAME` | `ragdb` | Nombre de la base de datos |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | URL de Ollama |
-| `EMBEDDING_MODEL` | `mxbai-embed-large` | Modelo de embeddings |
+| `EMBEDDING_MODEL` | `nomic-embed-text` | Modelo de embeddings |
 | `SIMILARITY_THRESHOLD` | `0.7` | Umbral de similitud |
 | `TOP_K_RESULTS` | `5` | Resultados por búsqueda |
 

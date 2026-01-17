@@ -195,6 +195,41 @@ router.get('/conversations/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/conversations/:id/messages - Obtener mensajes de una conversación
+router.get('/conversations/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    // Verificar propiedad de la conversación
+    const conversation = await verifyConversationOwnership(id, userId);
+    
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+    
+    // Obtener mensajes
+    const result = await db.query(
+      `SELECT 
+        id, 
+        role, 
+        content, 
+        created_at, 
+        verification_data,
+        rating_stats
+       FROM messages 
+       WHERE conversation_id = $1 
+       ORDER BY created_at ASC`,
+      [id]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al recuperar mensajes:', err.message);
+    res.status(500).json({ error: 'No se pudo recuperar el historial de mensajes' });
+  }
+});
+
 // PUT /api/conversations/:id - Actualizar conversación
 router.put('/conversations/:id', authenticateToken, async (req, res) => {
   try {

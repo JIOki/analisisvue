@@ -10,7 +10,7 @@ import { generateEmbedding } from '../routes/embeddingService.js';
 const BASE = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const LLM_MODEL = process.env.LLM_MODEL || 'llama3.2:1b';
 
-// Límites conservadoras para el modelo mxbai-embed-large
+// Límites conservadoras para el modelo nomic-embed-text
 // Aproximadamente: 1 token ≈ 4 caracteres, modelo típico tiene 512 tokens
 const EMBEDDING_MAX_CHARS = 1500;  // Aprox 375 tokens - muy seguro
 const ANALYSIS_MAX_CHARS = 800;    // Aprox 200 tokens - muy seguro

@@ -95,19 +95,14 @@ function isOutsideClicked(event) {
 }
 
 .layout-main-container {
-    position: fixed;
-    left: 0px;
-    right: 100px;
-    margin-left: 0px;
-    margin-top: calc(1vh - 108px);
-    margin-bottom: calc(100vh - 1px);
+   
     display: flex;
     flex-direction: column;
-    transition: margin-left 0.3s ease-out;
-    z-index: 10;
-    height: calc(130vh - 160px);
-    overflow-y: auto;
-    width: calc(190vh - 110px);
+    min-height: 100vh;
+    justify-content: space-between;
+    padding: 6rem 2rem 0 2rem;
+    
+    
 }
 /* Sidebar States */
 .layout-overlay .layout-main-container,

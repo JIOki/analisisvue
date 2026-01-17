@@ -69,7 +69,7 @@ async def health_check():
         version="1.0.0",
         uptime_seconds=round(uptime, 2),
         config={
-            "embedding_model": "mxbai-embed-large",
+            "embedding_model": "nomic-embed-text",
             "similarity_threshold": 0.7,
             "top_k": 5
         }

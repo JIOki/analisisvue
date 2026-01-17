@@ -17,7 +17,7 @@ Sistema de **Generación Aumentada por Recuperación (RAG)** que permite a los u
 
 - Node.js 18+ y npm
 - PostgreSQL 16+ con extensión pgvector
-- Ollama con modelos mxbai-embed-large y gemma3
+- Ollama con modelos nomic-embed-text y llama3.2
 - Docker y Docker Compose (opcional, para despliegue)
 
 ## Instalación Rápida
@@ -73,8 +73,8 @@ docker run -d \
   ollama/ollama:latest
 
 # Descargar modelos de IA
-docker exec rag_ollama ollama pull mxbai-embed-large
-docker exec rag_ollama ollama pull gemma3
+docker exec rag_ollama ollama pull nomic-embed-text
+docker exec rag_ollama ollama pull llama3.2
 ```
 
 #### 3. Inicializar Base de Datos
@@ -171,8 +171,8 @@ DB_PASS=ragpass
 
 # Ollama
 OLLAMA_BASE_URL=http://localhost:11434
-EMBEDDING_MODEL=mxbai-embed-large
-LLM_MODEL=gemma3
+EMBEDDING_MODEL=nomic-embed-text
+LLM_MODEL=llama3.2
 
 # JWT
 JWT_SECRET=tu-secret-seguro-aqui

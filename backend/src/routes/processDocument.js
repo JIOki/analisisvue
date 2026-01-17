@@ -17,16 +17,16 @@ import { XMLParser } from 'fast-xml-parser';
 import { DOMParser } from 'xmldom';
 import { kml } from '@tmcw/togeojson';
 import { generateEmbedding } from '../routes/embeddingService.js';
-import { semanticChunking } from '../utils/semanticChunking.js';
+import { fastChunking } from '../utils/simpleChunking.js';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const MAX_CHUNK_LENGTH = 1024;
-const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "1024", 10);
+const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "768", 10);
 const MAX_CHUNKS = 500;
-const BATCH_SIZE = 5; // Reducido para procesamiento con metadata enriquecida
+const BATCH_SIZE = 10; // Aumentado porque el chunking rápido genera más chunks pero menos procesamiento
 
 const BASE = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 console.log('🔧 OLLAMA_BASE_URL desde env:', process.env.OLLAMA_BASE_URL);
@@ -60,9 +60,9 @@ export async function processDocument(buffer, sourceId, client, filename = 'docu
 
     console.log(`📝 Texto extraído: ${rawText.length} caracteres`);
 
-    // Chunking semántico (nuevo sistema)
-    console.log('🧠 Iniciando chunking semántico inteligente...');
-    const richChunks = await semanticChunking(rawText, {
+    // Chunking rápido (nuevo sistema optimizado)
+    console.log('🚀 Iniciando chunking rápido optimizado...');
+    const richChunks = await fastChunking(rawText, {
       filename: filename,
       mimeType: mimeType,
       sourceId: sourceId

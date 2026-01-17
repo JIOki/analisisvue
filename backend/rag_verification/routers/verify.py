@@ -276,6 +276,6 @@ async def get_verification_stats():
         "config": {
             "similarity_threshold": 0.7,
             "top_k_results": 5,
-            "embedding_model": "mxbai-embed-large"
+            "embedding_model": "nomic-embed-text"
         }
     }

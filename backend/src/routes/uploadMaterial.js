@@ -18,7 +18,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // ✅ Limita a 10MB
 });
 
-const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "1024", 10);
+const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "768", 10);
 const MAX_CHUNKS = 500;
 const BATCH_SIZE = 10;
 

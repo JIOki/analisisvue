@@ -13,7 +13,7 @@ import pool from '../db.js';
 import { generateEmbedding, generate } from './embeddingService.js';
 import privacyService from '../services/privacyService.js';
 
-const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "1024", 10);
+const VECTOR_DIM = parseInt(process.env.VECTOR_DIM || "768", 10);
 const MAX_CHUNKS = parseInt(process.env.MAX_CHUNKS || "10", 10);
 const SIMILARITY_THRESHOLD = parseFloat(process.env.SIMILARITY_THRESHOLD || "0.5");
 

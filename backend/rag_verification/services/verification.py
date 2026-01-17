@@ -263,7 +263,7 @@ class OllamaEmbedder:
             client = self._get_client()
             
             # Truncar texto si es muy largo
-            # El modelo mxbai-embed-large puede manejar hasta ~8192 tokens
+            # El modelo nomic-embed-text puede manejar hasta ~8192 tokens
             # Pero para estar seguros, limitamos a 3000 caracteres (~1000 tokens)
             max_chars = 3000
             if len(text) > max_chars:
@@ -296,7 +296,7 @@ class OllamaEmbedder:
             Matriz de embeddings
         """
         if not texts:
-            return np.array([]).reshape(0, 1024)  # Default dimension
+            return np.array([]).reshape(0, 768)  # Default dimension
         
         try:
             client = self._get_client()
@@ -324,7 +324,7 @@ class OllamaEmbedder:
         except Exception as e:
             logger.error(f"Error generando embeddings: {e}")
             # Devolver ceros en caso de error para no fallar todo el proceso
-            return np.zeros((len(texts), 1024), dtype=np.float32)
+            return np.zeros((len(texts), 768), dtype=np.float32)
     
     def embed_text_safe(self, text: str, max_chars: int = 2000) -> List[float]:
         """
@@ -357,7 +357,7 @@ class OllamaEmbedder:
             
         except Exception as e:
             logger.warning(f"Error generando embedding (usando fallback de ceros): {e}")
-            return [0.0] * 1024
+            return [0.0] * 768
     
     def embed_texts_safe(self, texts: List[str], max_chars: int = 1500) -> np.ndarray:
         """
@@ -371,7 +371,7 @@ class OllamaEmbedder:
             Matriz de embeddings o ceros si falla
         """
         if not texts:
-            return np.array([]).reshape(0, 1024)
+            return np.array([]).reshape(0, 768)
         
         try:
             client = self._get_client()
@@ -397,7 +397,7 @@ class OllamaEmbedder:
             
         except Exception as e:
             logger.warning(f"Error generando embeddings (usando fallback de ceros): {e}")
-            return np.zeros((len(texts), 1024), dtype=np.float32)
+            return np.zeros((len(texts), 768), dtype=np.float32)
 
 
 class ClaimAnalyzer:
@@ -506,7 +506,7 @@ class VerificationService:
         
         try:
             # Configuracion de limites para evitar errores de contexto
-            # El modelo mxbai-embed-large tiene limite ~8192 tokens de entrada total
+            # El modelo nomic-embed-text tiene limite ~8192 tokens de entrada total
             # Pero para estar seguros y evitar cualquier limite del API, usamos limites conservadores
             MAX_CHUNKS = 5
             MAX_CHUNK_LENGTH = 800  # Reducido significativamente para evitar errores 400

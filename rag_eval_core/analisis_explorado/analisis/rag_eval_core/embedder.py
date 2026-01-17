@@ -1,6 +1,6 @@
 """
 Wrapper para el modelo de Embeddings de Ollama
-Maneja la generación de embeddings usando el modelo mxbai-embed-large
+Maneja la generación de embeddings usando el modelo nomic-embed-text
 """
 
 import numpy as np
@@ -26,7 +26,7 @@ class OllamaEmbedder:
         Inicializa el embedder
         
         Args:
-            model: Nombre del modelo de Ollama (default: mxbai-embed-large)
+            model: Nombre del modelo de Ollama (default: nomic-embed-text)
             ollama_url: URL base de Ollama (default: http://localhost:11434)
         """
         self.model = model or config.embedding.model
@@ -173,7 +173,7 @@ class OllamaEmbedder:
                 self._embedding_dim = len(test_embedding)
             except Exception as e:
                 logger.error(f"Error obteniendo dimensión: {e}")
-                # Usar dimensión por defecto para mxbai-embed-large
+                # Usar dimensión por defecto para nomic-embed-text
                 self._embedding_dim = config.embedding.dimension
         
         return self._embedding_dim

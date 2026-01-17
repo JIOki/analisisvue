@@ -31,9 +31,9 @@ class DatabaseConfig:
 @dataclass
 class EmbeddingConfig:
     """Configuración del modelo de embeddings"""
-    model: str = os.getenv("EMBEDDING_MODEL", "mxbai-embed-large")
+    model: str = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
     ollama_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    dimension: int = 1024  # Dimensión de mxbai-embed-large
+    dimension: int = 1024  # Dimensión de nomic-embed-text
 
 
 @dataclass
