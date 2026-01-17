@@ -37,6 +37,15 @@
       <!-- Message Content -->
       <div class="message-content" v-html="formatMessage(message.content)"></div>
       
+      <!-- Verification Badge for Assistant Messages -->
+      <div v-if="message.role === 'assistant' && hasVerification" class="verification-badge-container">
+        <VerificationBadge 
+          :level="verificationLevel"
+          :score="verificationScore"
+          :show-score="true"
+        />
+      </div>
+      
       <!-- Rating System for Assistant Messages -->
       <RatingButton
         v-if="message.role === 'assistant' && message.id"
@@ -62,8 +71,9 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, computed } from 'vue';
 import RatingButton from './RatingButton.vue';
+import VerificationBadge from './VerificationBadge.vue';
 
 const props = defineProps({
   message: {
@@ -140,11 +150,61 @@ function handleRatingChange(event) {
     props.message.rating_stats = event.stats;
   }
 }
+
+// ============================================
+// VERIFICATION DATA COMPUTED PROPERTIES
+// ============================================
+
+// Get verification data from message (handles both direct and nested formats)
+const verificationData = computed(() => {
+  const msg = props.message;
+  if (!msg) return null;
+  
+  // Try direct verification_data field (from API)
+  if (msg.verification_data) {
+    return typeof msg.verification_data === 'string' 
+      ? JSON.parse(msg.verification_data) 
+      : msg.verification_data;
+  }
+  
+  // Try nested in verification object (from realtime response)
+  if (msg.verification && typeof msg.verification === 'object') {
+    return msg.verification;
+  }
+  
+  return null;
+});
+
+// Check if message has verification data
+const hasVerification = computed(() => {
+  const data = verificationData.value;
+  return data && data.confidence_score !== undefined;
+});
+
+// Get confidence score (0-1)
+const verificationScore = computed(() => {
+  const data = verificationData.value;
+  if (!data) return 0;
+  return data.confidence_score || 0;
+});
+
+// Get confidence level string
+const verificationLevel = computed(() => {
+  const data = verificationData.value;
+  if (!data) return 'nula';
+  return data.confidence_level || 'nula';
+});
 </script>
 
 <style scoped>
 .message-wrapper {
   animation: glassSlideIn 0.4s ease-out;
+}
+
+/* Verification Badge Container */
+.verification-badge-container {
+  margin-top: 12px;
+  margin-bottom: 8px;
 }
 
 @keyframes glassSlideIn {

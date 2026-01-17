@@ -6,8 +6,90 @@ import { Router } from "express";
 import db from "../db.js";
 import { sendMessage, embed } from "../ollama.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
+import { classifyQueryIntent, generateGeneralResponse, generateContextualResponse } from "./intelligentRouter.js";
 
 const router = Router();
+
+// URL del servicio de verificación RAG (Python/FastAPI)
+const VERIFICATION_SERVICE_URL = process.env.VERIFICATION_SERVICE_URL || "http://localhost:8001";
+
+// ============================================
+// UTILITARIOS PARA VERIFICACIÓN RAG
+// ============================================
+
+/**
+ * Verifica la respuesta usando el servicio RAG Verification
+ * @param {string} query - Pregunta original
+ * @param {string} response - Respuesta generada
+ * @param {Array} contextChunks - Chunks de contexto utilizados
+ * @param {string} userId - ID del usuario
+ * @param {string} conversationId - ID de la conversación
+ * @returns {Object} - Datos de verificación o null si falla
+ */
+async function verifyResponseWithRAGService(query, response, contextChunks, userId, conversationId) {
+  try {
+    // Preparar contexto para el servicio de verificación
+    const context_text = contextChunks.length > 0
+      ? contextChunks.map(c => `[${c.source_title}]: ${c.content}`).join('\n\n')
+      : '';
+
+    const linked_material_ids = [...new Set(contextChunks.map(c => c.source_id))];
+
+    // Llamar al servicio de verificación
+    const verifyResponse = await fetch(`${VERIFICATION_SERVICE_URL}/api/v1/verify/response`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        query: query,
+        response: response,
+        linked_material_ids: linked_material_ids,
+        user_id: userId,
+        conversation_id: conversationId,
+        context_text: context_text,
+        context_chunks: contextChunks.map(c => ({
+          id: c.chunk_id,
+          content: c.content,
+          document_id: c.source_id,
+          document_name: c.source_title,
+          similarity: c.similarity || 0.7
+        }))
+      })
+    });
+
+    if (!verifyResponse.ok) {
+      console.error('Error en servicio de verificación:', await verifyResponse.text());
+      return null;
+    }
+
+    const verificationResult = await verifyResponse.json();
+    
+    console.log(`✅ Verificación completada - Confianza: ${verificationResult.confidence_score?.toFixed(2) || 0}`);
+    
+    // Retornar solo los datos necesarios para guardar
+    return {
+      confidence_score: verificationResult.confidence_score || 0,
+      confidence_level: verificationResult.confidence_level || 'nula',
+      status: verificationResult.status || 'unverified',
+      claims_supported: verificationResult.metrics?.supported_claims || 0,
+      claims_unsupported: verificationResult.metrics?.unsupported_claims || 0,
+      sources_count: verificationResult.metrics?.total_evidence_sources || 0,
+      max_similarity: verificationResult.metrics?.max_similarity || 0,
+      avg_similarity: verificationResult.metrics?.avg_similarity || 0,
+      processing_time_ms: verificationResult.processing_time_ms || 0,
+      warnings: verificationResult.warnings || [],
+      relevant_sources: verificationResult.relevant_sources?.slice(0, 5).map(s => ({
+        id: s.id,
+        title: s.source_title,
+        similarity: s.similarity
+      })) || []
+    };
+  } catch (error) {
+    console.error('Error en verificación RAG:', error.message);
+    return null;
+  }
+}
 
 // ============================================
 // UTILITARIOS PARA LA FASE 5
@@ -622,7 +704,7 @@ router.put('/sessions/:id/end', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT DE CHAT CON CONTEXTO DE CONVERSACIÓN
+// ENDPOINT DE CHAT CON INTELIGENT ROUTING
 // ============================================
 
 // POST /api/conversations/:id/chat - Enviar mensaje con RAG filtrado por conversación
@@ -638,6 +720,7 @@ router.post('/conversations/:id/chat', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'message es obligatorio' });
     }
     
+    // Verificar propiedad de la conversación
     const conversation = await verifyConversationOwnership(id, userId);
     
     if (!conversation) {
@@ -647,130 +730,216 @@ router.post('/conversations/:id/chat', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'La conversación no está activa' });
     }
     
-    // Verificar que hay materiales vinculados
-    const materialsCheck = await db.query(
-      "SELECT COUNT(*) FROM conversation_materials WHERE conversation_id = $1 AND status = 'active'",
+    // Obtener historial de conversación para contexto
+    const historyResult = await db.query(
+      `SELECT role, content FROM messages 
+       WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 4`,
       [id]
     );
+    const chatHistory = historyResult.rows.reverse();
     
-    if (parseInt(materialsCheck.rows[0].count) === 0) {
-      return res.status(400).json({ 
-        error: 'No hay materiales vinculados a esta conversación',
-        hint: 'Vincula materiales antes de enviar mensajes'
-      });
-    }
+    // ========================================
+    // ETAPA 1: ROUTER - Clasificar intención
+    // ========================================
+    const routerResult = await classifyQueryIntent(message, chatHistory);
     
-    // Guardar mensaje del usuario
+    console.log(`🎯 Routing: "${message.substring(0, 50)}..." → ${routerResult.classification}`);
+    
+    // ========================================
+    // ETAPA 2: Guardar mensaje del usuario
+    // ========================================
     const userMessageResult = await db.query(
-      `INSERT INTO messages (conversation_id, role, content) 
-       VALUES ($1, 'user', $2) 
+      `INSERT INTO messages (conversation_id, role, content, metadata) 
+       VALUES ($1, 'user', $2, $3) 
        RETURNING id, created_at`,
-      [id, message]
+      [id, message, JSON.stringify({ 
+        routing: routerResult,
+        search_performed: routerResult.classification === 'document_query'
+      })]
     );
     const userMessageId = userMessageResult.rows[0].id;
     
-    // Obtener chunks relevantes usando el contexto de la conversación
-    const relevantChunks = await getRelevantChunksForConversation(message, id, 0.5);
+    let reply;
+    let contextChunks = [];
+    let searchPerformed = false;
     
-    // Construir contexto
-    const context = relevantChunks.length > 0
-      ? relevantChunks.map(chunk => `[${chunk.source_title}]: ${chunk.content}`).join('\n\n---\n\n')
-      : '';
-    
-    // Obtener configuración de la conversación
-    const config = conversation.conversation_config || {};
-    const systemPrompt = config.system_prompt_override || 
-      'Eres un asistente experto que responde preguntas basándose en el contexto proporcionado.';
-    
-    // Construir mensaje completo
-    const fullMessage = context 
-      ? `${systemPrompt}\n\n=== CONTEXTO ===\n${context}\n=== FIN CONTEXTO ===\n\n=== PREGUNTA ===\n${message}\n=== FIN PREGUNTA ===`
-      : `${systemPrompt}\n\n${message}`;
-    
-    // Obtener o crear sesión
-    let currentSession = session_id;
-    if (!currentSession) {
-      const sessionResult = await db.query(
-        `SELECT id FROM chat_sessions 
-         WHERE conversation_id = $1 AND status = 'active'
-         ORDER BY started_at DESC LIMIT 1`,
+    // ========================================
+    // ETAPA 3: Branching según clasificación
+    // ========================================
+    if (routerResult.classification === 'general_chat') {
+      // --- RUTA A: Chat General (sin RAG) ---
+      console.log('📝 Ruta: Chat General (sin búsqueda en BD)');
+      
+      reply = await generateGeneralResponse(message, chatHistory);
+      
+    } else {
+      // --- RUTA B: Document Query (con RAG) ---
+      console.log('📚 Ruta: Document Query (con búsqueda semántica)');
+      
+      // Verificar que hay materiales vinculados
+      const materialsCheck = await db.query(
+        "SELECT COUNT(*) FROM conversation_materials WHERE conversation_id = $1 AND status = 'active'",
         [id]
       );
-      if (sessionResult.rows.length > 0) {
-        currentSession = sessionResult.rows[0].id;
+      
+      if (parseInt(materialsCheck.rows[0].count) === 0) {
+        // No hay materiales, responder que no hay contexto
+        reply = "No hay documentos vinculados a esta conversación. Por favor, vincula documentos para que pueda responder preguntas sobre su contenido.";
+        contextChunks = [];
+      } else {
+        // Buscar chunks relevantes usando las keywords del router
+        searchPerformed = true;
+        contextChunks = await getRelevantChunksForConversation(
+          routerResult.search_keywords?.join(' ') || message, 
+          id, 
+          0.3 // Umbral reducido para más resultados
+        );
+        
+        // Usar Strict Context Synthesizer
+        const synthesisResult = await generateContextualResponse(message, contextChunks);
+        reply = synthesisResult.response;
+        
+        // Si no hay contexto disponible, informar al usuario
+        if (!synthesisResult.context_available) {
+          console.log('⚠️ No se encontró contexto relevante');
+        }
       }
     }
     
-    // Enviar mensaje al modelo
-    const reply = await sendMessage(null, fullMessage);
+    // ========================================
+    // ETAPA 4: Guardar respuesta del asistente
+    // ========================================
     
-    // Guardar respuesta del asistente
+    // Verificar la respuesta usando el servicio RAG Verification
+    let verificationData = null;
+    try {
+      verificationData = await verifyResponseWithRAGService(
+        message,
+        reply,
+        contextChunks,
+        userId,
+        id
+      );
+    } catch (verifyError) {
+      console.error('Error en verificación:', verifyError.message);
+    }
+    
     const assistantMessageResult = await db.query(
-      `INSERT INTO messages (conversation_id, role, content) 
-       VALUES ($1, 'assistant', $2) 
+      `INSERT INTO messages (conversation_id, role, content, verification_data) 
+       VALUES ($1, 'assistant', $2, $3) 
        RETURNING id, created_at`,
-      [id, reply]
+      [id, reply, verificationData ? JSON.stringify(verificationData) : null]
     );
     const assistantMessageId = assistantMessageResult.rows[0].id;
     
-    // Registrar en rag_query_logs
+    // Si la verificación falló, actualizar después
+    if (!verificationData && contextChunks.length > 0) {
+      try {
+        await db.query(
+          `UPDATE messages SET verification_data = $1 WHERE id = $2`,
+          [JSON.stringify({
+            confidence_score: 0,
+            confidence_level: 'nula',
+            status: 'unverified',
+            error: 'Verificación no disponible',
+            sources_checked: contextChunks.length
+          }), assistantMessageId]
+        );
+      } catch (updateError) {
+        console.error('Error actualizando verificación:', updateError.message);
+      }
+    }
+    
+    // Obtener el mensaje completo con verification_data
+    const fullAssistantMessage = await db.query(
+      `SELECT id, role, content, verification_data, created_at 
+       FROM messages WHERE id = $1`,
+      [assistantMessageId]
+    );
+    
+    // ========================================
+    // ETAPA 5: Registrar en logs
+    // ========================================
     const endTime = Date.now();
     await db.query(
       `INSERT INTO rag_query_logs (
         conversation_id, message_id, original_query, rewritten_query,
         results_retrieved, results_used, source_ids, chunk_ids,
-        retrieved_context, query_time_ms, total_tokens_used
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        retrieved_context, query_time_ms, total_tokens_used,
+        routing_classification, routing_reasoning
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         id, 
         assistantMessageId,
         message,
-        context ? message : null,
-        relevantChunks.length,
-        relevantChunks.length,
-        relevantChunks.map(c => c.source_id),
-        relevantChunks.map(c => c.chunk_id),
-        JSON.stringify(relevantChunks.map(c => ({
+        routerResult.classification === 'document_query' ? JSON.stringify(routerResult.search_keywords) : null,
+        contextChunks.length,
+        contextChunks.length,
+        contextChunks.map(c => c.source_id),
+        contextChunks.map(c => c.chunk_id),
+        JSON.stringify(contextChunks.map(c => ({
           source: c.source_title,
-          content: c.content.substring(0, 500)
+          content: c.content?.substring(0, 500) || ''
         }))),
         endTime - startTime,
-        Math.ceil((message.length + reply.length) / 4) // Estimación de tokens
+        Math.ceil((message.length + reply.length) / 4),
+        routerResult.classification,
+        routerResult.reasoning
       ]
     );
     
     // Actualizar métricas de uso de materiales
-    for (const chunk of relevantChunks) {
-      await db.query(
-        `SELECT update_material_usage_metrics($1, $2, $3)`,
-        [id, chunk.source_id, Math.ceil(chunk.content.length / 4)]
-      );
+    if (searchPerformed && contextChunks.length > 0) {
+      for (const chunk of contextChunks) {
+        await db.query(
+          `SELECT update_material_usage_metrics($1, $2, $3)`,
+          [id, chunk.source_id, Math.ceil((chunk.content?.length || 0) / 4)]
+        );
+      }
     }
     
+    // ========================================
+    // RESPUESTA FINAL
+    // ========================================
     res.json({
       reply,
       user_message: userMessageResult.rows[0],
-      assistant_message: assistantMessageResult.rows[0],
+      assistant_message: fullAssistantMessage.rows[0],
       message_id: assistantMessageId,
-      context_used: relevantChunks.length,
-      query_time_ms: endTime - startTime,
-      sources: [...new Set(relevantChunks.map(c => ({
+      
+      // Información de routing
+      routing: {
+        classification: routerResult.classification,
+        reasoning: routerResult.reasoning,
+        search_keywords: routerResult.search_keywords,
+        search_performed: searchPerformed
+      },
+      
+      // Verificación RAG
+      verification: verificationData ? {
+        confidence_score: verificationData.confidence_score,
+        confidence_level: verificationData.confidence_level,
+        status: verificationData.status,
+        claims_supported: verificationData.claims_supported,
+        claims_unsupported: verificationData.claims_unsupported,
+        sources_count: verificationData.sources_count,
+        max_similarity: verificationData.max_similarity,
+        warnings: verificationData.warnings
+      } : null,
+      
+      // Contexto utilizado
+      context_used: contextChunks.length,
+      context_sources: [...new Set(contextChunks.map(c => ({
         id: c.source_id,
         title: c.source_title
       })))],
-      // Chunks de contexto para verificación RAG
-      context_chunks: relevantChunks.map(c => ({
-        id: c.chunk_id,
-        content: c.content,
-        document_id: c.source_id,
-        document_name: c.source_title,
-        page: c.chunk_index,
-        similarity: c.similarity,
-        metadata: c.metadata
-      }))
+      
+      // Metadatos de rendimiento
+      query_time_ms: endTime - startTime
     });
+    
   } catch (err) {
-    console.error('Error en chat con contexto:', err.message);
+    console.error('Error en chat con routing inteligente:', err.message);
     res.status(500).json({ error: 'No se pudo procesar el mensaje' });
   }
 });

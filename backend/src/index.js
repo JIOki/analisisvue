@@ -14,6 +14,7 @@ import authRoutes from './routes/authRoutes.js';
 import privacyRoutes from './routes/privacyRoutes.js';
 import knowledgeRoutes from './routes/knowledgeRoutes.js';
 import conversationHistoryRoutes from './routes/conversationHistoryRoutes.js';
+import intelligentRouter from './routes/intelligentRouter.js';
 
 
 
@@ -32,6 +33,7 @@ app.use("/api/records", uploadRecords);
 app.use("/api/ask", ask);
 app.use("/api/privacy", privacyRoutes);
 app.use("/api/knowledge", knowledgeRoutes);
+app.use("/api", intelligentRouter);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
